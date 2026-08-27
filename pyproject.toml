@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "opspilot"
+name = "opspilot-2"
 version = "0.1.0"
 description = "Safety-first AI incident response for Kubernetes workloads"
 readme = "README.md"
@@ -34,4 +34,3 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
-
