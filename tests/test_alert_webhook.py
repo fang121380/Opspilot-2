@@ -1,0 +1,88 @@
+from datetime import UTC, datetime
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import create_app
+
+
+@pytest.fixture
+def client() -> TestClient:
+    return TestClient(create_app())
+
+
+def alertmanager_payload(*, fingerprint: str = "alert-123") -> dict[str, object]:
+    return {
+        "receiver": "opspilot",
+        "status": "firing",
+        "alerts": [
+            {
+                "status": "firing",
+                "labels": {
+                    "alertname": "HighErrorRate",
+                    "namespace": "demo",
+                    "service": "checkout",
+                    "severity": "critical",
+                },
+                "annotations": {
+                    "summary": "Checkout error rate is above the SLO threshold.",
+                },
+                "startsAt": "2026-08-27T08:00:00Z",
+                "fingerprint": fingerprint,
+            }
+        ],
+        "groupLabels": {"alertname": "HighErrorRate"},
+        "commonLabels": {"service": "checkout", "namespace": "demo"},
+    }
+
+
+def test_accepts_firing_alert_and_creates_normalized_incident(client: TestClient) -> None:
+    response = client.post("/webhooks/prometheus", json=alertmanager_payload())
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["deduplicated"] is False
+    assert body["incident"]["status"] == "received"
+    assert body["incident"]["alert_name"] == "HighErrorRate"
+    assert body["incident"]["namespace"] == "demo"
+    assert body["incident"]["service"] == "checkout"
+    assert body["incident"]["severity"] == "critical"
+    assert body["incident"]["alert_fingerprint"] == "alert-123"
+    assert body["incident"]["started_at"] == "2026-08-27T08:00:00Z"
+    assert datetime.fromisoformat(body["incident"]["created_at"]).tzinfo == UTC
+
+
+def test_deduplicates_active_alerts_by_fingerprint(client: TestClient) -> None:
+    first = client.post("/webhooks/prometheus", json=alertmanager_payload())
+    duplicate = client.post("/webhooks/prometheus", json=alertmanager_payload())
+
+    assert first.status_code == 202
+    assert duplicate.status_code == 202
+    assert duplicate.json()["deduplicated"] is True
+    assert duplicate.json()["incident"]["id"] == first.json()["incident"]["id"]
+
+
+def test_uses_stable_fallback_fingerprint_when_alertmanager_omits_one(client: TestClient) -> None:
+    payload = alertmanager_payload(fingerprint="")
+
+    first = client.post("/webhooks/prometheus", json=payload)
+    duplicate = client.post("/webhooks/prometheus", json=payload)
+
+    assert first.status_code == 202
+    assert first.json()["incident"]["alert_fingerprint"].startswith("sha256:")
+    assert duplicate.json()["deduplicated"] is True
+
+
+def test_rejects_firing_webhook_without_alerts(client: TestClient) -> None:
+    response = client.post("/webhooks/prometheus", json={"status": "firing", "alerts": []})
+
+    assert response.status_code == 422
+
+
+def test_lists_created_incidents(client: TestClient) -> None:
+    created = client.post("/webhooks/prometheus", json=alertmanager_payload())
+
+    response = client.get("/incidents")
+
+    assert response.status_code == 200
+    assert response.json() == [created.json()["incident"]]
