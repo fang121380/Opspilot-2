@@ -1,7 +1,7 @@
 PYTHON ?= .venv/bin/python
 PIP ?= .venv/bin/pip
 
-.PHONY: setup test lint format run
+.PHONY: setup test coverage lint format run
 
 setup:
 	$(PYTHON) -m pip install --upgrade pip
@@ -9,6 +9,9 @@ setup:
 
 test:
 	$(PYTHON) -m pytest
+
+coverage:
+	$(PYTHON) -m pytest --cov=app --cov-report=term-missing
 
 lint:
 	$(PYTHON) -m ruff check .
@@ -18,4 +21,3 @@ format:
 
 run:
 	$(PYTHON) -m uvicorn app.main:app --reload
-
