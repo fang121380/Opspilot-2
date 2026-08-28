@@ -18,6 +18,13 @@ class FakeRollbackClient:
         return "ok"
 
 
+class FailingRollbackClient:
+    async def rollback_deployment(
+        self, *, namespace: str, deployment: str, dry_run: bool
+    ) -> str:
+        raise RuntimeError("sensitive cluster detail")
+
+
 def app_with_incident(
     incident_id: UUID, *, remediation_executor: RemediationExecutor | None = None
 ):
@@ -159,3 +166,37 @@ def test_execute_without_approval_keeps_incident_awaiting_approval() -> None:
 
     assert response.status_code == 403
     assert client.get("/incidents").json()[0]["status"] == "awaiting_approval"
+
+
+def test_execute_failure_is_sanitized_and_keeps_uncertain_state() -> None:
+    executor = RemediationExecutor(
+        policy=RemediationPolicy(allowed_namespaces={"demo"}),
+        rollback_client=FailingRollbackClient(),
+    )
+    incident_id = uuid4()
+    client = TestClient(app_with_incident(incident_id, remediation_executor=executor))
+    proposal = client.post(
+        "/remediation/proposals",
+        json={
+            "incident_id": str(incident_id),
+            "action": "rollback_deployment",
+            "namespace": "demo",
+            "deployment": "checkout",
+        },
+    ).json()
+    approval = client.post(
+        f"/remediation/proposals/{proposal['id']}/approval",
+        json={"approved_by": "operator", "expires_in_minutes": 10},
+    ).json()
+
+    response = client.post(
+        "/remediation/execute",
+        json={"proposal_id": proposal["id"], "approval_id": approval["id"]},
+    )
+
+    assert response.status_code == 503
+    assert "sensitive" not in response.text
+    assert client.get("/incidents").json()[0]["status"] == "executing"
+    audit = client.get(f"/incidents/{incident_id}/audit").json()
+    assert audit[-1]["event_type"] == "remediation.failed"
+    assert audit[-1]["payload"] == {"error_type": "RuntimeError", "outcome": "unknown"}

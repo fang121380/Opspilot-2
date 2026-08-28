@@ -179,3 +179,13 @@ async def execute_remediation(
             payload={"reason": str(error)},
         )
         raise HTTPException(status_code=403, detail=str(error)) from error
+    except Exception as error:  # noqa: BLE001 - 写操作结果未知时必须保守停留
+        audit_repository.append(
+            event_type=AuditEventType.REMEDIATION_FAILED,
+            incident_id=proposal.incident_id,
+            payload={"error_type": type(error).__name__, "outcome": "unknown"},
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="remediation outcome is unknown; manual review is required",
+        ) from error

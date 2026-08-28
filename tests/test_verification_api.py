@@ -21,6 +21,11 @@ class FakeVerifier:
         )
 
 
+class FailingVerifier:
+    async def verify(self, incident: Incident) -> VerificationOutcome:
+        raise RuntimeError("sensitive metrics detail")
+
+
 def app_for_verification(*, resolved: bool) -> tuple[TestClient, Incident]:
     repository = IncidentRepository()
     incident = Incident(
@@ -71,3 +76,28 @@ def test_verification_rejects_incident_in_wrong_state() -> None:
     response = client.post(f"/incidents/{incident.id}/verify")
 
     assert response.status_code == 409
+
+
+def test_verification_failure_is_sanitized_and_audited() -> None:
+    repository = IncidentRepository()
+    incident = Incident(
+        status=IncidentStatus.VERIFYING,
+        alert_name="HighErrorRate",
+        alert_fingerprint="verification-failure",
+        service="checkout",
+        namespace="demo",
+        started_at=datetime(2026, 8, 28, tzinfo=UTC),
+    )
+    repository.create_or_get_active(incident)
+    client = TestClient(
+        create_app(incident_repository=repository, verifier=FailingVerifier())
+    )
+
+    response = client.post(f"/incidents/{incident.id}/verify")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "incident verification failed"
+    assert "sensitive" not in response.text
+    assert client.get("/incidents").json()[0]["status"] == "verifying"
+    audit = client.get(f"/incidents/{incident.id}/audit").json()
+    assert audit[-1]["event_type"] == "verification.failed"

@@ -46,6 +46,8 @@
 
 审批 API 在 `app/api/remediation.py`：提案、审批和执行是三个独立操作。默认应用没有执行器，执行接口会返回 503；只有显式注入执行器后，且请求带有匹配审批，才可能触达 Kubernetes 客户端。
 
+Kubernetes 写调用抛出异常时，系统不能判断请求是否已被集群部分接受，因此事故保守停留在 `executing`，返回脱敏 503 并记录 `remediation.failed`。它不会自动重试或把状态退回审批阶段，必须由操作员核对 Deployment 和审计记录。
+
 事故状态会随流程持久化：接收告警后为 `received`，调查时为 `investigating`，出现修复建议后为 `awaiting_approval`，执行期间为 `executing`，写操作成功后进入 `verifying`。缺少、过期或不匹配的审批会把状态保持在 `awaiting_approval`，不会调用 Kubernetes 写接口。
 
 ## 6. 理解审计和追踪

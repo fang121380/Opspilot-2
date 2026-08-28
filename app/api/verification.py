@@ -51,7 +51,18 @@ async def verify_incident(
     if incident.status != IncidentStatus.VERIFYING:
         raise HTTPException(status_code=409, detail="incident is not awaiting verification")
 
-    outcome = await verifier.verify(incident)
+    try:
+        outcome = await verifier.verify(incident)
+    except Exception as error:  # noqa: BLE001 - 外部指标依赖的统一 HTTP 边界
+        audit_repository.append(
+            event_type=AuditEventType.VERIFICATION_FAILED,
+            incident_id=incident.id,
+            payload={"error_type": type(error).__name__},
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="incident verification failed",
+        ) from error
     if outcome.resolved:
         repository.update_status(str(incident.id), IncidentStatus.RESOLVED)
     audit_repository.append(
