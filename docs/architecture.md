@@ -62,7 +62,7 @@ app/
 ## Incident state flow
 
 ```text
-received -> investigating -> awaiting_approval -> executing -> verifying
+received -> investigating -> awaiting_approval -> executing -> verifying -> resolved
                               ^                    |
                               |____________________|
                            rejected approval

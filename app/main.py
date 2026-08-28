@@ -10,10 +10,12 @@ from app.adapters.kubernetes_client import from_kubeconfig
 from app.adapters.prometheus import PrometheusMetricsAdapter
 from app.agent.jobs import InvestigationJobManager
 from app.agent.orchestrator import IncidentInvestigator
+from app.agent.verification import IncidentVerifier
 from app.api.investigation import router as investigation_router
 from app.api.jobs import router as jobs_router
 from app.api.prometheus import router as prometheus_router
 from app.api.remediation import router as remediation_router
+from app.api.verification import router as verification_router
 from app.config import settings
 from app.executor.kubernetes import KubernetesRollbackClient
 from app.observability.metrics import metrics_app
@@ -34,6 +36,7 @@ def create_app(
     remediation_executor: object | None = None,
     remediation_repository: RemediationRepository | None = None,
     job_manager: object | None = None,
+    verifier: object | None = None,
     database_url: str | None = None,
 ) -> FastAPI:
     relational_store = (
@@ -65,6 +68,8 @@ def create_app(
                         runtime_app.state.investigator,
                         runtime_app.state.incident_repository,
                     )
+                if runtime_app.state.verifier is None:
+                    runtime_app.state.verifier = IncidentVerifier(prometheus)
                 logger.info("已配置 Kubernetes 和 Prometheus 调查依赖")
             except Exception:  # noqa: BLE001 - 运行时依赖应保持 API 可用
                 logger.exception("无法配置调查依赖，调查接口将返回 503")
@@ -95,6 +100,7 @@ def create_app(
         if investigator is not None
         else None
     )
+    app.state.verifier = verifier
 
     @app.get("/health", tags=["system"])
     async def health() -> dict[str, str]:
@@ -106,6 +112,7 @@ def create_app(
     app.include_router(investigation_router)
     app.include_router(remediation_router)
     app.include_router(jobs_router)
+    app.include_router(verification_router)
     app.mount("/metrics", metrics_app)
     return app
 

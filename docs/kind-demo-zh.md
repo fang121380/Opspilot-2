@@ -93,6 +93,12 @@ curl -s -X POST http://127.0.0.1:18000/remediation/execute \
 
 修复建议必须引用已存在的事故；不存在的 `incident_id` 会返回 HTTP 404。
 
+实际写操作成功后事故进入 `verifying`。等待至少一个 Prometheus 抓取周期，再调用只读验证接口；只有 1 分钟 HTTP 5xx 速率不高于 `0.01` 时才转为 `resolved`。Prometheus 没有返回样本时保持 `verifying`，不会把“没有数据”误判成恢复：
+
+```bash
+curl -s -X POST http://127.0.0.1:18000/incidents/<incident-id>/verify
+```
+
 ## 恢复和清理
 
 ```bash

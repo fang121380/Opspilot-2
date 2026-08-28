@@ -18,6 +18,7 @@ class AuditEventType(StrEnum):
     REMEDIATION_REQUESTED = "remediation.requested"
     REMEDIATION_EXECUTED = "remediation.executed"
     REMEDIATION_REJECTED = "remediation.rejected"
+    VERIFICATION_COMPLETED = "verification.completed"
 
 
 class AuditEvent(BaseModel):
