@@ -27,6 +27,9 @@ class IncidentRepository:
     def list(self) -> list[Incident]:
         return list(self._incidents.values())
 
+    def get(self, incident_id: str) -> Incident | None:
+        return self._incidents.get(incident_id)
+
     def close(self, incident_id: str) -> None:
         incident = self._incidents[incident_id]
         incident.status = IncidentStatus.CLOSED

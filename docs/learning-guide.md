@@ -72,3 +72,11 @@ make lint
 ```
 
 单元测试不依赖 Kubernetes 集群或在线 LLM。Kind 故障演练和真实 Collector 属于后续集成阶段。
+
+## 9. 理解 MCP 只读工具层
+
+阅读 `app/mcp_server.py` 和 [ADR-0011](adr/0011-readonly-mcp-diagnostic-server.md)。
+
+MCP Server 只公布三个工具：Deployment 状态、服务 Pod 摘要和固定模板的 HTTP 5xx 查询。它没有回滚、重启、Shell 或任意 PromQL 工具。`tests/test_mcp_server.py` 使用官方 SDK 的内存 Client 检查工具清单、Schema 和结构化输出。
+
+这里的核心概念是**标准协议不等于无限权限**：MCP 解决发现和调用方式，安全边界仍然由应用明确决定。

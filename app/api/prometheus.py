@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.domain.incidents import Incident
+from app.observability.metrics import ALERTS_RECEIVED
 from app.observability.tracing import current_trace_id, traced
 from app.storage.audit import AuditEvent, AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
@@ -94,6 +95,7 @@ async def receive_prometheus_webhook(
     audit_repository: AuditDependency,
 ) -> IncidentReceipt:
     with traced("alertmanager.webhook"):
+        ALERTS_RECEIVED.inc()
         firing_alerts = [alert for alert in webhook.alerts if alert.status == "firing"]
         if not firing_alerts:
             raise HTTPException(
