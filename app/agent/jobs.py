@@ -3,13 +3,21 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Protocol
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
 from app.agent.analysis import AnalysisOutcome
-from app.agent.orchestrator import IncidentInvestigator
-from app.domain.incidents import Incident
+from app.domain.incidents import Incident, IncidentStatus
+
+
+class Investigator(Protocol):
+    async def investigate(self, incident: Incident) -> AnalysisOutcome: ...
+
+
+class IncidentStatusRepository(Protocol):
+    def update_status(self, incident_id: str, status: IncidentStatus) -> Incident: ...
 
 
 class JobStatus(StrEnum):
@@ -32,8 +40,13 @@ class InvestigationJob(BaseModel):
 class InvestigationJobManager:
     """轻量本地任务管理器；生产环境可替换为 Redis/Celery 或消息队列。"""
 
-    def __init__(self, investigator: IncidentInvestigator) -> None:
+    def __init__(
+        self,
+        investigator: Investigator,
+        incident_repository: IncidentStatusRepository | None = None,
+    ) -> None:
         self._investigator = investigator
+        self._incident_repository = incident_repository
         self._jobs: dict[UUID, InvestigationJob] = {}
 
     def enqueue(self, incident: Incident) -> InvestigationJob:
@@ -48,11 +61,18 @@ class InvestigationJobManager:
 
     async def _run(self, job: InvestigationJob, incident: Incident) -> None:
         job.status = JobStatus.RUNNING
+        self._update_incident(incident.id, IncidentStatus.INVESTIGATING)
         try:
             job.analysis = await self._investigator.investigate(incident)
             job.status = JobStatus.SUCCEEDED
+            if job.analysis.recommended_actions:
+                self._update_incident(incident.id, IncidentStatus.AWAITING_APPROVAL)
         except Exception as error:  # noqa: BLE001 - job boundary records failures
             job.status = JobStatus.FAILED
             job.error = type(error).__name__
         finally:
             job.finished_at = datetime.now(UTC)
+
+    def _update_incident(self, incident_id: UUID, status: IncidentStatus) -> None:
+        if self._incident_repository is not None:
+            self._incident_repository.update_status(str(incident_id), status)

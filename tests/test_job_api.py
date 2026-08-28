@@ -37,6 +37,25 @@ def test_job_api_queues_and_reads_job() -> None:
     assert read.json()["incident_id"] == str(incident.id)
 
 
+def test_app_factory_auto_configures_jobs_for_injected_investigator() -> None:
+    repository = IncidentRepository()
+    incident = Incident(
+        alert_name="HighErrorRate",
+        alert_fingerprint="auto-job-api-test",
+        service="checkout",
+        namespace="demo",
+        started_at=datetime(2026, 8, 28, tzinfo=UTC),
+    )
+    repository.create_or_get_active(incident)
+    client = TestClient(
+        create_app(incident_repository=repository, investigator=FakeInvestigator())
+    )
+
+    response = client.post(f"/incidents/{incident.id}/investigate/jobs")
+
+    assert response.status_code == 202
+
+
 def test_job_api_rejects_unknown_job() -> None:
     manager = InvestigationJobManager(FakeInvestigator())
     client = TestClient(create_app(job_manager=manager))

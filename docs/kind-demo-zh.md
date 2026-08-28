@@ -64,6 +64,13 @@ curl -s -X POST http://127.0.0.1:18000/remediation/proposals \
   -d '{"incident_id":"<incident-id>","action":"rollback_deployment","namespace":"demo","deployment":"checkout"}'
 ```
 
+也可以用异步任务接口执行相同调查。它先返回 Job ID，任务完成后会把事故状态推进到 `awaiting_approval`：
+
+```bash
+curl -s -X POST http://127.0.0.1:18000/incidents/<incident-id>/investigate/jobs
+curl -s http://127.0.0.1:18000/investigation/jobs/<job-id>
+```
+
 没有匹配审批时执行接口固定返回 HTTP 403，Deployment 不会被修改：
 
 ```bash

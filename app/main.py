@@ -8,6 +8,7 @@ from kubernetes_asyncio import client
 
 from app.adapters.kubernetes_client import from_kubeconfig
 from app.adapters.prometheus import PrometheusMetricsAdapter
+from app.agent.jobs import InvestigationJobManager
 from app.agent.orchestrator import IncidentInvestigator
 from app.api.investigation import router as investigation_router
 from app.api.jobs import router as jobs_router
@@ -59,6 +60,11 @@ def create_app(
                     runtime_app.state.remediation_executor = runtime_remediation_executor(
                         client.AppsV1Api(kubernetes_client), settings.remediation_namespaces()
                     )
+                if runtime_app.state.job_manager is None:
+                    runtime_app.state.job_manager = InvestigationJobManager(
+                        runtime_app.state.investigator,
+                        runtime_app.state.incident_repository,
+                    )
                 logger.info("已配置 Kubernetes 和 Prometheus 调查依赖")
             except Exception:  # noqa: BLE001 - 运行时依赖应保持 API 可用
                 logger.exception("无法配置调查依赖，调查接口将返回 503")
@@ -84,7 +90,11 @@ def create_app(
     app.state.remediation_repository = (
         remediation_repository or relational_store or RemediationRepository()
     )
-    app.state.job_manager = job_manager
+    app.state.job_manager = job_manager or (
+        InvestigationJobManager(investigator, app.state.incident_repository)
+        if investigator is not None
+        else None
+    )
 
     @app.get("/health", tags=["system"])
     async def health() -> dict[str, str]:
