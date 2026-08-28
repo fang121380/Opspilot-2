@@ -105,13 +105,16 @@ async def receive_prometheus_webhook(
 
         incident = normalize_incident(firing_alerts[0])
         trace_id = current_trace_id()
+        stored_incident, deduplicated = repository.create_or_get_active(incident)
         audit_repository.append(
             event_type=AuditEventType.ALERT_RECEIVED,
-            incident_id=incident.id,
+            incident_id=stored_incident.id,
             trace_id=trace_id,
-            payload={"alert_name": incident.alert_name, "fingerprint": incident.alert_fingerprint},
+            payload={
+                "alert_name": stored_incident.alert_name,
+                "fingerprint": stored_incident.alert_fingerprint,
+            },
         )
-        stored_incident, deduplicated = repository.create_or_get_active(incident)
         audit_repository.append(
             event_type=(
                 AuditEventType.INCIDENT_DEDUPLICATED

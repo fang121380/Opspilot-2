@@ -52,6 +52,7 @@ The API health endpoint is available at `http://127.0.0.1:8000/health` and the O
 - [x] Audit and OpenTelemetry instrumentation
 - [x] Kind failure drill assets (runtime verification pending Docker)
 - [x] Read-only MCP diagnostic server
+- [x] Asynchronous investigation job API with status polling
 
 ## Current capabilities
 

@@ -61,6 +61,15 @@ def test_deduplicates_active_alerts_by_fingerprint(client: TestClient) -> None:
     assert duplicate.json()["deduplicated"] is True
     assert duplicate.json()["incident"]["id"] == first.json()["incident"]["id"]
 
+    audit = client.get(f"/incidents/{first.json()['incident']['id']}/audit")
+    assert [event["event_type"] for event in audit.json()] == [
+        "alert.received",
+        "incident.created",
+        "alert.received",
+        "incident.deduplicated",
+    ]
+    assert all(event["incident_id"] == first.json()["incident"]["id"] for event in audit.json())
+
 
 def test_uses_stable_fallback_fingerprint_when_alertmanager_omits_one(client: TestClient) -> None:
     payload = alertmanager_payload(fingerprint="")

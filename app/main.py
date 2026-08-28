@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.agent.orchestrator import IncidentInvestigator
 from app.api.investigation import router as investigation_router
+from app.api.jobs import router as jobs_router
 from app.api.prometheus import router as prometheus_router
 from app.api.remediation import router as remediation_router
 from app.config import settings
@@ -17,6 +18,7 @@ def create_app(
     audit_repository: AuditRepository | None = None,
     investigator: IncidentInvestigator | None = None,
     remediation_executor: object | None = None,
+    job_manager: object | None = None,
     database_url: str | None = None,
 ) -> FastAPI:
     relational_store = (
@@ -33,6 +35,7 @@ def create_app(
     app.state.audit_repository = audit_repository or relational_store or AuditRepository()
     app.state.investigator = investigator
     app.state.remediation_executor = remediation_executor
+    app.state.job_manager = job_manager
 
     @app.get("/health", tags=["system"])
     async def health() -> dict[str, str]:
@@ -43,6 +46,7 @@ def create_app(
     app.include_router(prometheus_router)
     app.include_router(investigation_router)
     app.include_router(remediation_router)
+    app.include_router(jobs_router)
     app.mount("/metrics", metrics_app)
     return app
 
