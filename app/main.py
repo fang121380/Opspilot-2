@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from kubernetes_asyncio import client
 
 from app.adapters.kubernetes_client import from_kubeconfig
@@ -112,6 +112,24 @@ def create_app(
         """Return a lightweight liveness response."""
 
         return {"status": "ok", "service": "opspilot-2"}
+
+    @app.get("/ready", tags=["system"])
+    async def ready() -> dict[str, str]:
+        """Return ready only after all incident workflow dependencies are wired."""
+
+        dependencies = {
+            "investigator": app.state.investigator,
+            "job_manager": app.state.job_manager,
+            "remediation_executor": app.state.remediation_executor,
+            "verifier": app.state.verifier,
+        }
+        missing = sorted(name for name, dependency in dependencies.items() if dependency is None)
+        if missing:
+            raise HTTPException(
+                status_code=503,
+                detail={"status": "not_ready", "missing_dependencies": missing},
+            )
+        return {"status": "ready", "service": "opspilot-2"}
 
     app.include_router(prometheus_router)
     app.include_router(investigation_router)

@@ -19,7 +19,7 @@ docker compose up --build
 curl http://127.0.0.1:8000/health
 ```
 
-Compose 会等待 PostgreSQL 健康后启动 API。API 自身的健康检查是无依赖的存活检查；Prometheus、Kubernetes 和 LLM 不可用时，调查接口会返回明确错误，不会返回伪造数据。
+Compose 会等待 PostgreSQL 健康后启动 API。`GET /health` 是无依赖的进程存活检查；`GET /ready` 只有在调查、异步任务、审批执行器和只读验证器全部装配后才返回 200。Prometheus、Kubernetes 和 LLM 不可用时，调查接口会返回明确错误，不会返回伪造数据。
 
 默认连接信息仅用于本地演示，不能用于生产环境。生产部署必须通过 Secret 管理数据库密码，并替换镜像标签、网络策略、RBAC 和备份策略。
 
@@ -27,7 +27,7 @@ Compose 会等待 PostgreSQL 健康后启动 API。API 自身的健康检查是�
 
 ## Kubernetes/Kind 模式
 
-Kind 演练清单在 `infra/kind/`，脚本说明见 [Kind 故障演练](kind-demo-zh.md)。当前演练验证服务故障和 Prometheus 告警；Opspilot 2 的真实 Kubernetes 客户端需要将 kubeconfig 或 ServiceAccount 注入运行环境。
+Kind 演练清单在 `infra/kind/`，脚本说明见 [Kind 故障演练](kind-demo-zh.md)。当前演练验证服务故障、Prometheus 告警、Alertmanager Webhook 和真实 Kubernetes 调查。Kubernetes readinessProbe 使用 `/ready`，livenessProbe 使用 `/health`，避免外部依赖装配失败时仍把 Pod 标记为可接流量。
 
 ## 配置项
 
