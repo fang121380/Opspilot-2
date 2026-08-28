@@ -25,7 +25,7 @@ Alertmanager Webhook
 Kubernetes AppsV1 回滚执行 + 审计和追踪
 ```
 
-文档入口：[产品范围](docs/product-scope.md)、[架构](docs/architecture.md)、[演示场景](docs/demo-scenario.md)、[部署说明](docs/deployment-zh.md)、[Kind 故障演练](docs/kind-demo-zh.md)、[中文学习指南](docs/learning-guide.md)、[评测基线](docs/evaluation-zh.md)、[ADR](docs/adr/) 和 [开源项目调研](docs/research/open-source-landscape.md)。
+文档入口：[产品范围](docs/product-scope.md)、[架构](docs/architecture.md)、[演示场景](docs/demo-scenario.md)、[部署说明](docs/deployment-zh.md)、[Kind 故障演练](docs/kind-demo-zh.md)、[中文学习指南](docs/learning-guide.md)、[评测基线](docs/evaluation-zh.md)、[面试讲解提纲](docs/interview-zh.md)、[ADR](docs/adr/) 和 [开源项目调研](docs/research/open-source-landscape.md)。
 
 ## 本地开发
 
