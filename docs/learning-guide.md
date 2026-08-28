@@ -18,6 +18,8 @@
 
 这里的核心概念是**幂等性**：监控系统会重复发送告警，接收端不能为同一个活动故障无限创建事故。
 
+去重只针对活动事故。事故进入 `resolved` 或 `closed` 后会释放 fingerprint；同一告警以后再次发生时必须创建新事故，保留两次独立的时间线。SQL 模型因此对 fingerprint 建普通索引，而不是永久唯一约束。
+
 ## 3. 检查只读适配器
 
 阅读 `app/adapters/prometheus.py` 和 `app/adapters/kubernetes.py`。

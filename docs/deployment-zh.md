@@ -23,6 +23,8 @@ Compose 会等待 PostgreSQL 健康后启动 API。API 自身的健康检查是�
 
 默认连接信息仅用于本地演示，不能用于生产环境。生产部署必须通过 Secret 管理数据库密码，并替换镜像标签、网络策略、RBAC 和备份策略。
 
+早期开发版数据库曾对 `alert_fingerprint` 创建永久唯一约束。当前模型允许已解决后同一告警再次创建事故；已有开发卷升级时应执行数据库迁移删除该唯一约束，或仅在没有保留价值的本地演示环境重建 Compose 数据卷。生产数据禁止通过删卷迁移。
+
 ## Kubernetes/Kind 模式
 
 Kind 演练清单在 `infra/kind/`，脚本说明见 [Kind 故障演练](kind-demo-zh.md)。当前演练验证服务故障和 Prometheus 告警；Opspilot 2 的真实 Kubernetes 客户端需要将 kubeconfig 或 ServiceAccount 注入运行环境。

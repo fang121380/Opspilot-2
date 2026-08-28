@@ -27,7 +27,7 @@ class IncidentRow(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     alert_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    alert_fingerprint: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    alert_fingerprint: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     service: Mapped[str | None] = mapped_column(String(255))
     namespace: Mapped[str | None] = mapped_column(String(255))
     severity: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -85,10 +85,12 @@ class SqlAlchemyStore:
             Base.metadata.create_all(self._engine)
 
     def create_or_get_active(self, incident: Incident) -> tuple[Incident, bool]:
+        terminal_statuses = {IncidentStatus.RESOLVED.value, IncidentStatus.CLOSED.value}
         with self._sessions.begin() as session:
             existing = session.scalar(
                 select(IncidentRow).where(
-                    IncidentRow.alert_fingerprint == incident.alert_fingerprint
+                    IncidentRow.alert_fingerprint == incident.alert_fingerprint,
+                    IncidentRow.status.not_in(terminal_statuses),
                 )
             )
             if existing is not None:
@@ -116,6 +118,9 @@ class SqlAlchemyStore:
             row.updated_at = datetime.now(UTC)
             session.flush()
             return self._to_incident(row)
+
+    def close(self, incident_id: str) -> None:
+        self.update_status(incident_id, IncidentStatus.CLOSED)
 
     def append_audit(
         self,

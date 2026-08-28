@@ -36,6 +36,8 @@ class IncidentRepository:
         incident = self._incidents[incident_id]
         incident.status = status
         incident.updated_at = datetime.now(UTC)
+        if status in {IncidentStatus.RESOLVED, IncidentStatus.CLOSED}:
+            self._active_by_fingerprint.pop(incident.alert_fingerprint, None)
         return incident.model_copy(deep=True)
 
     def close(self, incident_id: str) -> None:

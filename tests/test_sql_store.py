@@ -63,6 +63,18 @@ def test_sql_store_updates_incident_status_and_timestamp(tmp_path: Path) -> None
     assert store.get(str(incident.id)).status == IncidentStatus.AWAITING_APPROVAL
 
 
+def test_sql_store_allows_new_incident_after_previous_one_resolves(tmp_path: Path) -> None:
+    store = SqlAlchemyStore(f"sqlite:///{tmp_path / 'lifecycle.db'}")
+    first, _ = store.create_or_get_active(make_incident("recurring-alert"))
+    store.update_status(str(first.id), IncidentStatus.RESOLVED)
+
+    second, deduplicated = store.create_or_get_active(make_incident("recurring-alert"))
+
+    assert deduplicated is False
+    assert second.id != first.id
+    assert len(store.list()) == 2
+
+
 def test_sql_store_persists_proposal_and_approval_after_reopening(tmp_path: Path) -> None:
     database_url = f"sqlite:///{tmp_path / 'opspilot.db'}"
     store = SqlAlchemyStore(database_url)
