@@ -59,7 +59,9 @@ class RemediationProposalRow(Base):
     __tablename__ = "remediation_proposals"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.id"), nullable=False)
+    incident_id: Mapped[str] = mapped_column(
+        ForeignKey("incidents.id"), unique=True, nullable=False
+    )
     action: Mapped[str] = mapped_column(String(64), nullable=False)
     namespace: Mapped[str] = mapped_column(String(255), nullable=False)
     deployment: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -254,33 +256,64 @@ class SqlAlchemyStore:
     def list_for_incident(self, incident_id: UUID) -> list[AuditEvent]:
         return self.list_audit(incident_id)
 
-    def add_proposal(self, proposal: RemediationProposal) -> RemediationProposal:
-        with self._sessions.begin() as session:
-            session.merge(
-                RemediationProposalRow(
-                    id=str(proposal.id),
-                    incident_id=str(proposal.incident_id),
-                    action=proposal.action,
-                    namespace=proposal.namespace,
-                    deployment=proposal.deployment,
-                    created_at=proposal.created_at,
+    def create_or_get_proposal(
+        self, proposal: RemediationProposal
+    ) -> tuple[RemediationProposal, bool]:
+        try:
+            with self._sessions.begin() as session:
+                existing = session.scalar(
+                    select(RemediationProposalRow).where(
+                        RemediationProposalRow.incident_id == str(proposal.incident_id)
+                    )
                 )
-            )
-        return proposal.model_copy(deep=True)
+                if existing is not None:
+                    return self._to_proposal(existing), True
+                session.add(self._proposal_row(proposal))
+                session.flush()
+        except IntegrityError:
+            with self._sessions() as session:
+                existing = session.scalar(
+                    select(RemediationProposalRow).where(
+                        RemediationProposalRow.incident_id == str(proposal.incident_id)
+                    )
+                )
+                if existing is None:
+                    raise
+                return self._to_proposal(existing), True
+        return proposal.model_copy(deep=True), False
+
+    def add_proposal(self, proposal: RemediationProposal) -> RemediationProposal:
+        stored, _ = self.create_or_get_proposal(proposal)
+        return stored
 
     def get_proposal(self, proposal_id: UUID) -> RemediationProposal | None:
         with self._sessions() as session:
             row = session.get(RemediationProposalRow, str(proposal_id))
             if row is None:
                 return None
-            return RemediationProposal(
-                id=UUID(row.id),
-                incident_id=UUID(row.incident_id),
-                action=row.action,
-                namespace=row.namespace,
-                deployment=row.deployment,
-                created_at=self._utc(row.created_at),
-            )
+            return self._to_proposal(row)
+
+    @staticmethod
+    def _proposal_row(proposal: RemediationProposal) -> RemediationProposalRow:
+        return RemediationProposalRow(
+            id=str(proposal.id),
+            incident_id=str(proposal.incident_id),
+            action=proposal.action,
+            namespace=proposal.namespace,
+            deployment=proposal.deployment,
+            created_at=proposal.created_at,
+        )
+
+    @staticmethod
+    def _to_proposal(row: RemediationProposalRow) -> RemediationProposal:
+        return RemediationProposal(
+            id=UUID(row.id),
+            incident_id=UUID(row.incident_id),
+            action=row.action,
+            namespace=row.namespace,
+            deployment=row.deployment,
+            created_at=SqlAlchemyStore._utc(row.created_at),
+        )
 
     def add_approval(self, approval: Approval) -> Approval:
         with self._sessions.begin() as session:

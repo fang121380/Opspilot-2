@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine.reflection import Inspector
 
 INITIAL_REVISION = "0001_initial_schema"
-HEAD_REVISION = "0004_deduplicate_active_jobs"
+HEAD_REVISION = "0005_unique_proposals"
 CORE_TABLES = {
     "incidents",
     "audit_events",

@@ -10,7 +10,7 @@
 
 ## 决策
 
-- 使用 Alembic 管理 `0001_initial_schema -> 0002_active_fingerprint -> 0003_persist_investigation_jobs -> 0004_deduplicate_active_jobs` 版本链。
+- 使用 Alembic 管理 `0001_initial_schema -> 0002_active_fingerprint -> 0003_persist_investigation_jobs -> 0004_deduplicate_active_jobs -> 0005_unique_proposals` 版本链。
 - Compose 在 Uvicorn 启动前执行迁移，失败即停止 API。
 - 空数据库正常升级到 head。
 - 没有 Alembic 标记但完整匹配 `0001` 的库先 stamp `0001`，再执行真实升级。

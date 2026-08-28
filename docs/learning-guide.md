@@ -48,7 +48,7 @@ Alertmanager 认证和操作员认证复用同一个最小 Bearer 校验器，�
 
 操作只有同时满足动作白名单、命名空间范围、精确 proposal ID 匹配和审批未过期，才会到达回滚客户端。
 
-提案创建时还会把 `namespace` 和 `deployment` 与原始事故的作用域精确匹配，并再次执行 Kubernetes DNS-label 校验。这样即使调用方能创建请求，也不能把 checkout 事故改写成同一命名空间内 payments 服务的回滚。
+提案创建时还会把 `namespace` 和 `deployment` 与原始事故的作用域精确匹配，并再次执行 Kubernetes DNS-label 校验；只有 `received` 事故能创建第一份提案。进入 `awaiting_approval` 后重复创建会返回 409，避免同一事故出现多个待审批动作。这样即使调用方能创建请求，也不能把 checkout 事故改写成同一命名空间内 payments 服务的回滚。
 
 这里的核心概念是**纵深防御**：单独的审批不足以防止越权、误绑定和过期重放。
 

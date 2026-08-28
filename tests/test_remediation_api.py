@@ -85,6 +85,17 @@ def test_create_proposal_and_approval_endpoints() -> None:
     assert client.get(f"/remediation/approvals/{approval.json()['id']}").status_code == 200
     assert client.get("/incidents").json()[0]["status"] == "awaiting_approval"
 
+    repeated_while_waiting = client.post(
+        "/remediation/proposals",
+        json={
+            "incident_id": str(incident_id),
+            "action": "rollback_deployment",
+            "namespace": "demo",
+            "deployment": "checkout",
+        },
+    )
+    assert repeated_while_waiting.status_code == 409
+
 
 def test_approval_rejects_unknown_proposal() -> None:
     client = authenticated_client(

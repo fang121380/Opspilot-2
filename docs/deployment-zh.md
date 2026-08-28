@@ -37,7 +37,7 @@ alembic current
 
 版本链从旧版永久唯一 `alert_fingerprint` 结构升级到可空、唯一的 `active_fingerprint`：活动事故回填 fingerprint，`resolved`/`closed` 历史记录保持空值，因此相同告警以后可以重新创建事故。
 
-迁移入口只自动接管三种可证明的状态：空数据库、`0001` 旧版完整结构、当前完整但尚无 Alembic 标记的开发结构。缺表、约束不匹配或未知结构会直接失败，不会删表、删卷或猜测修复。版本链当前为 `0001_initial_schema -> 0002_active_fingerprint -> 0003_persist_investigation_jobs -> 0004_deduplicate_active_jobs`；Compose 现有命名卷会无损升级，事故和既有审批数据保留。若 `0004` 发现同一事故已有多个 queued/running Job，会拒绝猜测保留哪一个，要求操作员先核对处理。生产环境不建议执行破坏性降级。
+迁移入口只自动接管三种可证明的状态：空数据库、`0001` 旧版完整结构、当前完整但尚无 Alembic 标记的开发结构。缺表、约束不匹配或未知结构会直接失败，不会删表、删卷或猜测修复。版本链当前为 `0001_initial_schema -> 0002_active_fingerprint -> 0003_persist_investigation_jobs -> 0004_deduplicate_active_jobs -> 0005_unique_proposals`；Compose 现有命名卷会无损升级，事故和既有审批数据保留。若 `0004` 发现同一事故已有多个 queued/running Job，或 `0005` 发现同一事故已有多个提案，会拒绝猜测保留哪一个，要求操作员先核对处理。生产环境不建议执行破坏性降级。
 
 ## Kubernetes/Kind 模式
 

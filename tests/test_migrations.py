@@ -27,7 +27,7 @@ def test_migrations_initialize_fresh_database(tmp_path: Path) -> None:
     engine = sa.create_engine(url)
     inspector = sa.inspect(engine)
     assert action == "initialized"
-    assert current_revision(engine) == "0004_deduplicate_active_jobs"
+    assert current_revision(engine) == "0005_unique_proposals"
     assert "active_fingerprint" in {
         column["name"] for column in inspector.get_columns("incidents")
     }
@@ -48,7 +48,7 @@ def test_migrations_adopt_current_unversioned_schema(tmp_path: Path) -> None:
     action = run_migrations(url)
 
     assert action == "adopted-current"
-    assert current_revision(engine) == "0004_deduplicate_active_jobs"
+    assert current_revision(engine) == "0005_unique_proposals"
 
 
 def test_migrations_upgrade_legacy_unversioned_schema_without_losing_history(
@@ -166,3 +166,37 @@ def test_active_job_migration_refuses_ambiguous_duplicates(tmp_path: Path) -> No
     assert "active_incident_id" not in {
         column["name"] for column in sa.inspect(engine).get_columns("investigation_jobs")
     }
+
+
+def test_proposal_migration_refuses_duplicate_incident_proposals(tmp_path: Path) -> None:
+    url = database_url(tmp_path / "duplicate-proposals.db")
+    configuration = _alembic_config(url, None)
+    command.upgrade(configuration, "0004_deduplicate_active_jobs")
+    engine = sa.create_engine(url)
+    timestamp = datetime(2026, 8, 28, tzinfo=UTC).isoformat()
+    incident_id = "00000000-0000-0000-0000-000000000041"
+    with engine.begin() as connection:
+        connection.execute(
+            sa.text(
+                "INSERT INTO incidents "
+                "(id, status, alert_name, alert_fingerprint, active_fingerprint, "
+                "severity, started_at, created_at, updated_at) VALUES ("
+                ":id, 'awaiting_approval', 'HighErrorRate', 'proposal-dup', "
+                "'proposal-dup', 'critical', :timestamp, :timestamp, :timestamp)"
+            ),
+            {"id": incident_id, "timestamp": timestamp},
+        )
+        connection.execute(
+            sa.text(
+                "INSERT INTO remediation_proposals "
+                "(id, incident_id, action, namespace, deployment, created_at) VALUES "
+                "('00000000-0000-0000-0000-000000000042', :incident_id, "
+                "'rollback_deployment', 'demo', 'checkout', :timestamp), "
+                "('00000000-0000-0000-0000-000000000043', :incident_id, "
+                "'rollback_deployment', 'demo', 'checkout', :timestamp)"
+            ),
+            {"incident_id": incident_id, "timestamp": timestamp},
+        )
+
+    with pytest.raises(RuntimeError, match="duplicate incident proposals"):
+        run_migrations(url)

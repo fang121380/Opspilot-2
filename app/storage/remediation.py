@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from threading import RLock
 from uuid import UUID
 
 from app.policy.remediation import Approval, RemediationProposal
@@ -15,10 +16,23 @@ class RemediationRepository:
     def __init__(self) -> None:
         self._proposals: dict[UUID, RemediationProposal] = {}
         self._approvals: dict[UUID, Approval] = {}
+        self._proposal_by_incident: dict[UUID, UUID] = {}
+        self._lock = RLock()
+
+    def create_or_get_proposal(
+        self, proposal: RemediationProposal
+    ) -> tuple[RemediationProposal, bool]:
+        with self._lock:
+            existing_id = self._proposal_by_incident.get(proposal.incident_id)
+            if existing_id is not None:
+                return self._proposals[existing_id].model_copy(deep=True), True
+            self._proposals[proposal.id] = proposal.model_copy(deep=True)
+            self._proposal_by_incident[proposal.incident_id] = proposal.id
+            return proposal.model_copy(deep=True), False
 
     def add_proposal(self, proposal: RemediationProposal) -> RemediationProposal:
-        self._proposals[proposal.id] = proposal.model_copy(deep=True)
-        return proposal.model_copy(deep=True)
+        stored, _ = self.create_or_get_proposal(proposal)
+        return stored
 
     def get_proposal(self, proposal_id: UUID) -> RemediationProposal | None:
         proposal = self._proposals.get(proposal_id)

@@ -126,13 +126,15 @@ async def create_proposal(
     if transitioned is None:
         raise HTTPException(status_code=409, detail="incident status changed; retry request")
     proposal = RemediationProposal(**payload.model_dump())
-    repository.add_proposal(proposal)
+    stored_proposal, deduplicated = repository.create_or_get_proposal(proposal)
+    if deduplicated:
+        raise HTTPException(status_code=409, detail="incident already has a remediation proposal")
     audit_repository.append(
         event_type=AuditEventType.REMEDIATION_REQUESTED,
-        incident_id=proposal.incident_id,
-        payload=proposal.model_dump(mode="json"),
+        incident_id=stored_proposal.incident_id,
+        payload=stored_proposal.model_dump(mode="json"),
     )
-    return proposal
+    return stored_proposal
 
 
 @router.get("/remediation/proposals/{proposal_id}", response_model=RemediationProposal)

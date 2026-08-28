@@ -107,7 +107,7 @@ curl -s -X POST http://127.0.0.1:18000/remediation/execute \
 curl -s -X POST http://127.0.0.1:18000/incidents/<incident-id>/verify
 ```
 
-执行端点只接受处于 `awaiting_approval` 的事故，并用数据库条件更新原子抢占 `executing` 状态。第一次写操作成功后进入 `verifying`；重复提交同一 proposal/approval 或尝试为执行中、验证中、终态事故重新创建提案都会返回 HTTP 409，不能触发第二次回滚。Kind 演练使用内存存储和一个 API 副本；共享 PostgreSQL 的多副本部署使用相同的比较并交换契约保证只有一个副本取得执行权。
+提案端点只允许 `received` 事故创建第一份动作；事故进入 `awaiting_approval` 后重复提案返回 HTTP 409。执行端点只接受处于 `awaiting_approval` 的事故，并用数据库条件更新原子抢占 `executing` 状态。第一次写操作成功后进入 `verifying`；重复提交同一 proposal/approval 或尝试为执行中、验证中、终态事故重新创建提案都会返回 HTTP 409，不能触发第二次回滚。Kind 演练使用内存存储和一个 API 副本；共享 PostgreSQL 的多副本部署使用相同的比较并交换契约保证只有一个副本取得执行权。
 
 ## 恢复和清理
 
