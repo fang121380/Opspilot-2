@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from app.domain.incidents import IncidentStatus
 from app.policy.remediation import (
     Approval,
     ApprovalExpiredError,
@@ -75,6 +76,9 @@ async def create_proposal(
         raise HTTPException(status_code=404, detail="incident not found")
     proposal = RemediationProposal(**payload.model_dump())
     repository.add_proposal(proposal)
+    incident_repository.update_status(
+        str(proposal.incident_id), IncidentStatus.AWAITING_APPROVAL
+    )
     audit_repository.append(
         event_type=AuditEventType.REMEDIATION_REQUESTED,
         incident_id=proposal.incident_id,
@@ -137,6 +141,7 @@ async def execute_remediation(
     executor: ExecutorDependency = None,
     repository: RepositoryDependency = None,
     audit_repository: AuditDependency = None,
+    incident_repository: IncidentRepositoryDependency = None,
 ) -> ExecutionResult:
     if executor is None:
         raise HTTPException(status_code=503, detail="remediation executor is not configured")
@@ -147,7 +152,9 @@ async def execute_remediation(
     if request.approval_id and approval is None:
         raise HTTPException(status_code=404, detail="remediation approval not found")
     try:
+        incident_repository.update_status(str(proposal.incident_id), IncidentStatus.EXECUTING)
         result = await executor.execute(proposal, approval=approval)
+        incident_repository.update_status(str(proposal.incident_id), IncidentStatus.VERIFYING)
         audit_repository.append(
             event_type=AuditEventType.REMEDIATION_EXECUTED,
             incident_id=proposal.incident_id,
@@ -155,6 +162,9 @@ async def execute_remediation(
         )
         return result
     except (PolicyDeniedError, ApprovalRequiredError, ApprovalExpiredError) as error:
+        incident_repository.update_status(
+            str(proposal.incident_id), IncidentStatus.AWAITING_APPROVAL
+        )
         audit_repository.append(
             event_type=AuditEventType.REMEDIATION_REJECTED,
             incident_id=proposal.incident_id,

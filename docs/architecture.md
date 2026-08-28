@@ -59,6 +59,17 @@ app/
 - The executor accepts only a typed action such as `RollbackDeployment`.
 - The policy engine validates namespace, resource, actor, approval, and expiry before execution.
 
+## Incident state flow
+
+```text
+received -> investigating -> awaiting_approval -> executing -> verifying
+                              ^                    |
+                              |____________________|
+                           rejected approval
+```
+
+The API persists each transition in both the in-memory repository and SQLAlchemy store. A rejected, missing, mismatched, or expired approval cannot advance the incident to a mutating state.
+
 ## Initial technology choices
 
 - Python 3.12+ with FastAPI and Pydantic.
@@ -66,4 +77,3 @@ app/
 - `pytest` for tests and a linter/formatter enforced in CI.
 - Docker Compose for local dependencies and Kind for the Kubernetes drill.
 - OpenTelemetry SDK with an OTLP-compatible local collector in the integration environment.
-

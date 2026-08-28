@@ -107,6 +107,16 @@ class SqlAlchemyStore:
             row = session.get(IncidentRow, incident_id)
             return self._to_incident(row) if row is not None else None
 
+    def update_status(self, incident_id: str, status: IncidentStatus) -> Incident:
+        with self._sessions.begin() as session:
+            row = session.get(IncidentRow, incident_id)
+            if row is None:
+                raise KeyError(incident_id)
+            row.status = status.value
+            row.updated_at = datetime.now(UTC)
+            session.flush()
+            return self._to_incident(row)
+
     def append_audit(
         self,
         *,

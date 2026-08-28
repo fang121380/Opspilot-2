@@ -38,6 +38,7 @@ def test_investigation_api_returns_analysis_for_existing_incident() -> None:
 
     assert response.status_code == 200
     assert response.json()["incident"]["id"] == str(incident.id)
+    assert response.json()["incident"]["status"] == "investigating"
     assert response.json()["analysis"]["confidence"] == 0.7
 
 

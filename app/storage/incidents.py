@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from app.domain.incidents import Incident, IncidentStatus
 
 
@@ -30,7 +32,13 @@ class IncidentRepository:
     def get(self, incident_id: str) -> Incident | None:
         return self._incidents.get(incident_id)
 
+    def update_status(self, incident_id: str, status: IncidentStatus) -> Incident:
+        incident = self._incidents[incident_id]
+        incident.status = status
+        incident.updated_at = datetime.now(UTC)
+        return incident.model_copy(deep=True)
+
     def close(self, incident_id: str) -> None:
         incident = self._incidents[incident_id]
-        incident.status = IncidentStatus.CLOSED
+        self.update_status(incident_id, IncidentStatus.CLOSED)
         self._active_by_fingerprint.pop(incident.alert_fingerprint, None)

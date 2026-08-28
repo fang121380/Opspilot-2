@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
-from app.domain.incidents import Incident
+from app.domain.incidents import Incident, IncidentStatus
 from app.policy.remediation import Approval, RemediationProposal
 from app.storage.audit import AuditEventType
 from app.storage.sql import SqlAlchemyStore
@@ -50,6 +50,17 @@ def test_sql_store_does_not_confuse_distinct_fingerprints(tmp_path: Path) -> Non
     assert duplicate is False
     assert first.id != second.id
     assert len(store.list()) == 2
+
+
+def test_sql_store_updates_incident_status_and_timestamp(tmp_path: Path) -> None:
+    store = SqlAlchemyStore(f"sqlite:///{tmp_path / 'status.db'}")
+    incident, _ = store.create_or_get_active(make_incident())
+
+    updated = store.update_status(str(incident.id), IncidentStatus.AWAITING_APPROVAL)
+
+    assert updated.status == IncidentStatus.AWAITING_APPROVAL
+    assert updated.updated_at >= incident.updated_at
+    assert store.get(str(incident.id)).status == IncidentStatus.AWAITING_APPROVAL
 
 
 def test_sql_store_persists_proposal_and_approval_after_reopening(tmp_path: Path) -> None:

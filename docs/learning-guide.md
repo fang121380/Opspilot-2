@@ -32,7 +32,7 @@
 
 阅读 `app/agent/analysis.py` 和 [ADR-0003](adr/0003-evidence-gated-remediation.md)。
 
-初始分析器是确定性的。只有 Deployment 可用副本减少、HTTP 5xx 非零、近期日志包含错误信号这三个条件同时满足时，才建议回滚。
+初始分析器是确定性的。只有 HTTP 5xx 非零且匹配 Pod 的近期日志包含错误信号时，才建议回滚。Deployment 可用性仍作为证据展示，但应用层回归可能在所有 Pod 都 Ready 时持续返回 500，因此不能把副本健康误当成业务健康。
 
 这里的核心概念是**基于证据的推理**：以后可以让 LLM 帮助总结，但模型不能伪造证据，也不能直接授权变更。
 
@@ -45,6 +45,8 @@
 这里的核心概念是**纵深防御**：单独的审批不足以防止越权、误绑定和过期重放。
 
 审批 API 在 `app/api/remediation.py`：提案、审批和执行是三个独立操作。默认应用没有执行器，执行接口会返回 503；只有显式注入执行器后，且请求带有匹配审批，才可能触达 Kubernetes 客户端。
+
+事故状态会随流程持久化：接收告警后为 `received`，调查时为 `investigating`，出现修复建议后为 `awaiting_approval`，执行期间为 `executing`，写操作成功后进入 `verifying`。缺少、过期或不匹配的审批会把状态保持在 `awaiting_approval`，不会调用 Kubernetes 写接口。
 
 ## 6. 理解审计和追踪
 
@@ -89,11 +91,13 @@ Docker 镜像只复制运行所需的应用代码，Compose 提供 PostgreSQL �
 make test
 make coverage
 make lint
+make eval
+make demo
 ```
 
-单元测试不依赖 Kubernetes 集群或在线 LLM。Kind 故障演练和真实 Collector 属于后续集成阶段。
+单元测试不依赖 Kubernetes 集群或在线 LLM。Kind 故障演练已经覆盖 Prometheus、Alertmanager、集群内 API 和真实只读调查；真实 OpenTelemetry Collector 仍属于后续集成阶段。
 
-## 9. 理解 MCP 只读工具层
+## 12. 理解 MCP 只读工具层
 
 阅读 `app/mcp_server.py` 和 [ADR-0011](adr/0011-readonly-mcp-diagnostic-server.md)。
 

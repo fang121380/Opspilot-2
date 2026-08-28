@@ -57,6 +57,7 @@ def test_create_proposal_and_approval_endpoints() -> None:
     assert approval.json()["proposal_id"] == proposal_id
     assert client.get(f"/remediation/proposals/{proposal_id}").status_code == 200
     assert client.get(f"/remediation/approvals/{approval.json()['id']}").status_code == 200
+    assert client.get("/incidents").json()[0]["status"] == "awaiting_approval"
 
 
 def test_approval_rejects_unknown_proposal() -> None:
@@ -122,3 +123,28 @@ def test_execute_endpoint_runs_only_with_explicit_executor_and_approval() -> Non
 
     assert response.status_code == 200
     assert response.json()["status"] == "executed"
+    assert client.get("/incidents").json()[0]["status"] == "verifying"
+
+
+def test_execute_without_approval_keeps_incident_awaiting_approval() -> None:
+    executor = RemediationExecutor(
+        policy=RemediationPolicy(allowed_namespaces={"demo"}), rollback_client=FakeRollbackClient()
+    )
+    incident_id = uuid4()
+    client = TestClient(app_with_incident(incident_id, remediation_executor=executor))
+    proposal = client.post(
+        "/remediation/proposals",
+        json={
+            "incident_id": str(incident_id),
+            "action": "rollback_deployment",
+            "namespace": "demo",
+            "deployment": "checkout",
+        },
+    ).json()
+
+    response = client.post(
+        "/remediation/execute", json={"proposal_id": proposal["id"]}
+    )
+
+    assert response.status_code == 403
+    assert client.get("/incidents").json()[0]["status"] == "awaiting_approval"

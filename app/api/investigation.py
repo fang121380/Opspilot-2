@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
 from app.agent.analysis import AnalysisOutcome
-from app.domain.incidents import Incident
+from app.domain.incidents import Incident, IncidentStatus
 from app.observability.metrics import INVESTIGATIONS_STARTED
 from app.storage.incidents import IncidentRepository
 
@@ -52,6 +52,9 @@ async def investigate_incident(
     if incident is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident not found")
 
+    incident = repository.update_status(str(incident_id), IncidentStatus.INVESTIGATING)
     INVESTIGATIONS_STARTED.inc()
     analysis = await investigator.investigate(incident)
+    if analysis.recommended_actions:
+        incident = repository.update_status(str(incident_id), IncidentStatus.AWAITING_APPROVAL)
     return InvestigationResponse(incident=incident, analysis=analysis)
