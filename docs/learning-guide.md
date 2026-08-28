@@ -71,7 +71,19 @@
 
 这里的核心概念是**可重放基线**：在加入 LLM 的自适应工具调用之前，先让同一事故每次都走同一条可测试路径。
 
-## 9. 运行检查
+## 9. 理解异步调查任务
+
+阅读 `app/agent/jobs.py`、`app/api/jobs.py` 和 [ADR-0013](adr/0013-async-investigation-jobs.md)。
+
+长调查通过 `POST /incidents/{incident_id}/investigate/jobs` 返回 Job ID，再用 `GET /investigation/jobs/{job_id}` 查询状态。当前是进程内任务管理器，重启会丢失任务；后续生产部署可以替换为 Redis 或消息队列而不改变 HTTP 契约。
+
+## 10. 理解部署边界
+
+阅读 `Dockerfile`、`docker-compose.yml` 和 [部署说明](deployment-zh.md)。
+
+Docker 镜像只复制运行所需的应用代码，Compose 提供 PostgreSQL 和 Prometheus。本地无外部依赖时仍使用内存 Repository 做单元测试；设置 `OPSPILOT_DATABASE_URL` 后切换到 SQLAlchemy 持久化。
+
+## 11. 运行检查
 
 ```bash
 make test

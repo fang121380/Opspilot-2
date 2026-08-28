@@ -19,6 +19,8 @@ docker compose up --build
 curl http://127.0.0.1:8000/health
 ```
 
+Compose 会等待 PostgreSQL 健康后启动 API。API 自身的健康检查是无依赖的存活检查；Prometheus、Kubernetes 和 LLM 不可用时，调查接口会返回明确错误，不会返回伪造数据。
+
 默认连接信息仅用于本地演示，不能用于生产环境。生产部署必须通过 Secret 管理数据库密码，并替换镜像标签、网络策略、RBAC 和备份策略。
 
 ## Kubernetes/Kind 模式
