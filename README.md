@@ -25,7 +25,7 @@ Policy allowlist + exact, expiring human approval
 Narrow executor + post-action verification (next milestone)
 ```
 
-Design documents: [scope](docs/product-scope.md), [architecture](docs/architecture.md), [demo scenario](docs/demo-scenario.md), [ADRs](docs/adr/), and [open-source design research](docs/research/open-source-landscape.md).
+Design documents: [scope](docs/product-scope.md), [architecture](docs/architecture.md), [demo scenario](docs/demo-scenario.md), [Kind 故障演练](docs/kind-demo-zh.md), [中文学习指南](docs/learning-guide.md), [ADRs](docs/adr/), and [open-source design research](docs/research/open-source-landscape.md).
 
 ## Local development
 
@@ -47,7 +47,7 @@ The API health endpoint is available at `http://127.0.0.1:8000/health` and the O
 - [x] Read-only Kubernetes and Prometheus diagnostics
 - [x] Evidence-based deployment-regression analysis
 - [x] Approval-gated remediation policy and executor boundary
-- [ ] Audit and OpenTelemetry instrumentation
+- [x] Audit and OpenTelemetry instrumentation
 - [ ] Kind failure drill
 
 ## Current capabilities
@@ -57,6 +57,7 @@ The API health endpoint is available at `http://127.0.0.1:8000/health` and the O
 - Deterministic regression analysis requiring converging deployment, HTTP 5xx, and log evidence.
 - Explicit rollback proposal with action and namespace allowlists.
 - Matching, expiring human approval required before the rollback client can be invoked.
+- Reproducible Kind manifests and a deterministic `checkout` failure injector are included; execution waits for Docker Desktop.
 
 ## Environment status
 

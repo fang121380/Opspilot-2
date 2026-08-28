@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  namespace: demo
+  labels:
+    app: checkout
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: checkout
+          image: opspilot-2/checkout:dev
+          imagePullPolicy: Never
+          env:
+            - name: CHECKOUT_FAILURE_MODE
+              value: "none"
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout
+  namespace: demo
+  labels:
+    app: checkout
+spec:
+  selector:
+    app: checkout
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+
