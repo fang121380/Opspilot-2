@@ -10,7 +10,11 @@ from app.storage.incidents import IncidentRepository
 
 
 class FakeRollbackClient:
+    def __init__(self) -> None:
+        self.calls = 0
+
     async def rollback_deployment(self, *, namespace: str, deployment: str, dry_run: bool) -> str:
+        self.calls += 1
         return "ok"
 
 
@@ -97,8 +101,9 @@ def test_execute_endpoint_is_disabled_without_injected_executor() -> None:
 
 
 def test_execute_endpoint_runs_only_with_explicit_executor_and_approval() -> None:
+    rollback_client = FakeRollbackClient()
     executor = RemediationExecutor(
-        policy=RemediationPolicy(allowed_namespaces={"demo"}), rollback_client=FakeRollbackClient()
+        policy=RemediationPolicy(allowed_namespaces={"demo"}), rollback_client=rollback_client
     )
     incident_id = uuid4()
     client = TestClient(app_with_incident(incident_id, remediation_executor=executor))
@@ -124,6 +129,12 @@ def test_execute_endpoint_runs_only_with_explicit_executor_and_approval() -> Non
     assert response.status_code == 200
     assert response.json()["status"] == "executed"
     assert client.get("/incidents").json()[0]["status"] == "verifying"
+    replay = client.post(
+        "/remediation/execute",
+        json={"proposal_id": proposal["id"], "approval_id": approval["id"]},
+    )
+    assert replay.status_code == 409
+    assert rollback_client.calls == 1
 
 
 def test_execute_without_approval_keeps_incident_awaiting_approval() -> None:

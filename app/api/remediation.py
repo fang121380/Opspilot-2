@@ -151,6 +151,14 @@ async def execute_remediation(
     approval = repository.get_approval(request.approval_id) if request.approval_id else None
     if request.approval_id and approval is None:
         raise HTTPException(status_code=404, detail="remediation approval not found")
+    incident = incident_repository.get(str(proposal.incident_id))
+    if incident is None:
+        raise HTTPException(status_code=404, detail="incident not found")
+    if incident.status != IncidentStatus.AWAITING_APPROVAL:
+        raise HTTPException(
+            status_code=409,
+            detail=f"incident cannot execute remediation from status {incident.status.value}",
+        )
     try:
         incident_repository.update_status(str(proposal.incident_id), IncidentStatus.EXECUTING)
         result = await executor.execute(proposal, approval=approval)

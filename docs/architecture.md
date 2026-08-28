@@ -69,6 +69,7 @@ received -> investigating -> awaiting_approval -> executing -> verifying -> reso
 ```
 
 The API persists each transition in both the in-memory repository and SQLAlchemy store. A rejected, missing, mismatched, or expired approval cannot advance the incident to a mutating state.
+The executor accepts a write only from `awaiting_approval`; moving to `executing` before the Kubernetes call prevents replay within the single-process MVP. A production multi-replica deployment must replace this in-process ordering guarantee with a database compare-and-swap or distributed lock.
 
 ## Initial technology choices
 

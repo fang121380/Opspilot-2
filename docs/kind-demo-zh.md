@@ -99,6 +99,8 @@ curl -s -X POST http://127.0.0.1:18000/remediation/execute \
 curl -s -X POST http://127.0.0.1:18000/incidents/<incident-id>/verify
 ```
 
+执行端点只接受处于 `awaiting_approval` 的事故。第一次写操作开始后状态立即变为 `executing`，成功后为 `verifying`；重复提交同一 proposal/approval 会返回 HTTP 409，不能触发第二次回滚。Kind 演练固定运行一个 API 副本；生产多副本部署还必须用数据库条件更新或分布式锁保证跨进程互斥。
+
 ## 恢复和清理
 
 ```bash
