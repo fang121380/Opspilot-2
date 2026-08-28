@@ -37,14 +37,8 @@ def test_create_proposal_and_approval_endpoints() -> None:
 
 def test_execute_endpoint_is_disabled_without_injected_executor() -> None:
     client = TestClient(create_app())
-    proposal = {
-        "incident_id": str(uuid4()),
-        "action": "rollback_deployment",
-        "namespace": "demo",
-        "deployment": "checkout",
-    }
 
-    response = client.post("/remediation/execute", json={"proposal": proposal})
+    response = client.post("/remediation/execute", json={"proposal_id": str(uuid4())})
 
     assert response.status_code == 503
 
@@ -70,7 +64,8 @@ def test_execute_endpoint_runs_only_with_explicit_executor_and_approval() -> Non
     ).json()
 
     response = client.post(
-        "/remediation/execute", json={"proposal": proposal, "approval": approval}
+        "/remediation/execute",
+        json={"proposal_id": proposal["id"], "approval_id": approval["id"]},
     )
 
     assert response.status_code == 200

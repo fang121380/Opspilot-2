@@ -16,6 +16,7 @@ from app.config import settings
 from app.observability.metrics import metrics_app
 from app.storage.audit import AuditRepository
 from app.storage.incidents import IncidentRepository
+from app.storage.remediation import RemediationRepository
 from app.storage.sql import SqlAlchemyStore
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ def create_app(
     audit_repository: AuditRepository | None = None,
     investigator: IncidentInvestigator | None = None,
     remediation_executor: object | None = None,
+    remediation_repository: RemediationRepository | None = None,
     job_manager: object | None = None,
     database_url: str | None = None,
 ) -> FastAPI:
@@ -72,6 +74,7 @@ def create_app(
     app.state.audit_repository = audit_repository or relational_store or AuditRepository()
     app.state.investigator = investigator
     app.state.remediation_executor = remediation_executor
+    app.state.remediation_repository = remediation_repository or RemediationRepository()
     app.state.job_manager = job_manager
 
     @app.get("/health", tags=["system"])
