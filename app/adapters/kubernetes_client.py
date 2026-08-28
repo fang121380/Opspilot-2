@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from kubernetes_asyncio import client, config
+from kubernetes_asyncio.config.config_exception import ConfigException
 
 from app.adapters.kubernetes import KubernetesDiagnosticsAdapter
 
@@ -12,7 +13,10 @@ async def from_kubeconfig() -> tuple[KubernetesDiagnosticsAdapter, client.ApiCli
     对应的 ServiceAccount/RBAC 决定，适配器本身不扩大权限。
     """
 
-    await config.load_kube_config()
+    try:
+        config.load_incluster_config()
+    except ConfigException:
+        await config.load_kube_config()
     api_client = client.ApiClient()
     return (
         KubernetesDiagnosticsAdapter(

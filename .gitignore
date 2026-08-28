@@ -21,4 +21,4 @@ coverage.xml
 # Local Kubernetes and demo state
 .kind/
 .secrets/
-
+work/

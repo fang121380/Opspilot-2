@@ -1,5 +1,12 @@
+import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+import httpx
 from fastapi import FastAPI
 
+from app.adapters.kubernetes_client import from_kubeconfig
+from app.adapters.prometheus import PrometheusMetricsAdapter
 from app.agent.orchestrator import IncidentInvestigator
 from app.api.investigation import router as investigation_router
 from app.api.jobs import router as jobs_router
@@ -10,6 +17,8 @@ from app.observability.metrics import metrics_app
 from app.storage.audit import AuditRepository
 from app.storage.incidents import IncidentRepository
 from app.storage.sql import SqlAlchemyStore
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(
@@ -26,10 +35,38 @@ def create_app(
         if (database_url or settings.database_url)
         else None
     )
+
+    @asynccontextmanager
+    async def lifespan(runtime_app: FastAPI) -> AsyncIterator[None]:
+        http_client: httpx.AsyncClient | None = None
+        kubernetes_client = None
+        if runtime_app.state.investigator is None and settings.prometheus_url:
+            try:
+                kubernetes, kubernetes_client = await from_kubeconfig()
+                http_client = httpx.AsyncClient()
+                prometheus = PrometheusMetricsAdapter(settings.prometheus_url, client=http_client)
+                runtime_app.state.investigator = IncidentInvestigator(
+                    kubernetes=kubernetes,
+                    prometheus=prometheus,
+                    audit_repository=runtime_app.state.audit_repository,
+                )
+                logger.info("已配置 Kubernetes 和 Prometheus 调查依赖")
+            except Exception:  # noqa: BLE001 - 运行时依赖应保持 API 可用
+                logger.exception("无法配置调查依赖，调查接口将返回 503")
+                if http_client is not None:
+                    await http_client.aclose()
+                    http_client = None
+        yield
+        if http_client is not None:
+            await http_client.aclose()
+        if kubernetes_client is not None:
+            await kubernetes_client.close()
+
     app = FastAPI(
         title="Opspilot 2",
         description="Safety-first AI incident response for Kubernetes workloads.",
         version="0.1.0",
+        lifespan=lifespan,
     )
     app.state.incident_repository = incident_repository or relational_store or IncidentRepository()
     app.state.audit_repository = audit_repository or relational_store or AuditRepository()

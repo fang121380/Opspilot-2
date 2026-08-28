@@ -35,4 +35,6 @@ Kind 演练清单在 `infra/kind/`，脚本说明见 [Kind 故障演练](kind-de
 | `OPSPILOT_DATABASE_URL` | SQLAlchemy PostgreSQL 连接串 | 未设置，使用内存存储 |
 | `OPSPILOT_PROMETHEUS_URL` | Prometheus 地址 | 未设置 |
 
+设置 `OPSPILOT_PROMETHEUS_URL` 后，应用启动时先尝试集群内 ServiceAccount 配置，再尝试当前用户 kubeconfig；成功时自动装配 Kubernetes 只读适配器、Prometheus 适配器和调查编排器。关闭应用时会关闭 HTTP 和 Kubernetes 客户端。
+
 没有设置外部依赖时，API 仍可以接收告警和运行离线测试；调查接口会返回 503，而不是伪造诊断结果。
