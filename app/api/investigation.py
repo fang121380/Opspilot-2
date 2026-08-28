@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from app.agent.analysis import AnalysisOutcome
 from app.domain.incidents import Incident, IncidentStatus
 from app.observability.metrics import INVESTIGATIONS_STARTED
+from app.storage.audit import AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
 
 
@@ -38,8 +39,13 @@ def investigator_from_request(request: Request) -> Investigator:
     return investigator
 
 
+def audit_from_request(request: Request) -> AuditRepository:
+    return request.app.state.audit_repository
+
+
 RepositoryDependency = Annotated[IncidentRepository, Depends(repository_from_request)]
 InvestigatorDependency = Annotated[Investigator, Depends(investigator_from_request)]
+AuditDependency = Annotated[AuditRepository, Depends(audit_from_request)]
 
 
 @router.post("/incidents/{incident_id}/investigate", response_model=InvestigationResponse)
@@ -47,6 +53,7 @@ async def investigate_incident(
     incident_id: UUID,
     repository: RepositoryDependency,
     investigator: InvestigatorDependency,
+    audit_repository: AuditDependency,
 ) -> InvestigationResponse:
     incident = repository.get(str(incident_id))
     if incident is None:
@@ -54,7 +61,18 @@ async def investigate_incident(
 
     incident = repository.update_status(str(incident_id), IncidentStatus.INVESTIGATING)
     INVESTIGATIONS_STARTED.inc()
-    analysis = await investigator.investigate(incident)
+    try:
+        analysis = await investigator.investigate(incident)
+    except Exception as error:  # noqa: BLE001 - 外部调查依赖的统一 HTTP 边界
+        audit_repository.append(
+            event_type=AuditEventType.DIAGNOSTIC_FAILED,
+            incident_id=incident.id,
+            payload={"error_type": type(error).__name__},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="incident investigation failed",
+        ) from error
     if analysis.recommended_actions:
         incident = repository.update_status(str(incident_id), IncidentStatus.AWAITING_APPROVAL)
     return InvestigationResponse(incident=incident, analysis=analysis)

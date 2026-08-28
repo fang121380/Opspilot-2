@@ -13,6 +13,7 @@ class AuditEventType(StrEnum):
     INCIDENT_CREATED = "incident.created"
     INCIDENT_DEDUPLICATED = "incident.deduplicated"
     DIAGNOSTIC_COMPLETED = "diagnostic.completed"
+    DIAGNOSTIC_FAILED = "diagnostic.failed"
     ANALYSIS_COMPLETED = "analysis.completed"
     APPROVAL_GRANTED = "approval.granted"
     REMEDIATION_REQUESTED = "remediation.requested"

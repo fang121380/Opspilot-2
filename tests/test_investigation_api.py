@@ -18,6 +18,11 @@ class FakeInvestigator:
         )
 
 
+class FailingInvestigator:
+    async def investigate(self, incident: Incident) -> AnalysisOutcome:
+        raise RuntimeError("sensitive upstream detail")
+
+
 def make_incident() -> Incident:
     return Incident(
         alert_name="HighErrorRate",
@@ -59,3 +64,21 @@ def test_investigation_api_reports_missing_runtime_dependencies() -> None:
     response = client.post(f"/incidents/{incident.id}/investigate")
 
     assert response.status_code == 503
+
+
+def test_investigation_api_records_sanitized_dependency_failure() -> None:
+    repository = IncidentRepository()
+    incident = make_incident()
+    repository.create_or_get_active(incident)
+    client = TestClient(
+        create_app(incident_repository=repository, investigator=FailingInvestigator())
+    )
+
+    response = client.post(f"/incidents/{incident.id}/investigate")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "incident investigation failed"
+    assert "sensitive" not in response.text
+    audit = client.get(f"/incidents/{incident.id}/audit").json()
+    assert audit[-1]["event_type"] == "diagnostic.failed"
+    assert audit[-1]["payload"] == {"error_type": "RuntimeError"}
