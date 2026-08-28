@@ -67,6 +67,7 @@ def create_app(
                     runtime_app.state.job_manager = InvestigationJobManager(
                         runtime_app.state.investigator,
                         runtime_app.state.incident_repository,
+                        runtime_app.state.audit_repository,
                     )
                 if runtime_app.state.verifier is None:
                     runtime_app.state.verifier = IncidentVerifier(prometheus)
@@ -96,7 +97,11 @@ def create_app(
         remediation_repository or relational_store or RemediationRepository()
     )
     app.state.job_manager = job_manager or (
-        InvestigationJobManager(investigator, app.state.incident_repository)
+        InvestigationJobManager(
+            investigator,
+            app.state.incident_repository,
+            app.state.audit_repository,
+        )
         if investigator is not None
         else None
     )

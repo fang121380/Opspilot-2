@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.agent.analysis import AnalysisOutcome
 from app.domain.incidents import Incident, IncidentStatus
+from app.storage.audit import AuditEventType
 
 
 class Investigator(Protocol):
@@ -18,6 +19,10 @@ class Investigator(Protocol):
 
 class IncidentStatusRepository(Protocol):
     def update_status(self, incident_id: str, status: IncidentStatus) -> Incident: ...
+
+
+class AuditRepository(Protocol):
+    def append(self, **kwargs: object) -> object: ...
 
 
 class JobStatus(StrEnum):
@@ -44,9 +49,11 @@ class InvestigationJobManager:
         self,
         investigator: Investigator,
         incident_repository: IncidentStatusRepository | None = None,
+        audit_repository: AuditRepository | None = None,
     ) -> None:
         self._investigator = investigator
         self._incident_repository = incident_repository
+        self._audit_repository = audit_repository
         self._jobs: dict[UUID, InvestigationJob] = {}
 
     def enqueue(self, incident: Incident) -> InvestigationJob:
@@ -70,6 +77,12 @@ class InvestigationJobManager:
         except Exception as error:  # noqa: BLE001 - job boundary records failures
             job.status = JobStatus.FAILED
             job.error = type(error).__name__
+            if self._audit_repository is not None:
+                self._audit_repository.append(
+                    event_type=AuditEventType.DIAGNOSTIC_FAILED,
+                    incident_id=incident.id,
+                    payload={"error_type": job.error, "job_id": str(job.id)},
+                )
         finally:
             job.finished_at = datetime.now(UTC)
 

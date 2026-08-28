@@ -6,6 +6,7 @@ import pytest
 from app.agent.analysis import AnalysisOutcome, RemediationRecommendation
 from app.agent.jobs import InvestigationJobManager, JobStatus
 from app.domain.incidents import Incident, IncidentStatus
+from app.storage.audit import AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
 
 
@@ -76,3 +77,38 @@ async def test_job_manager_updates_incident_when_remediation_is_recommended() ->
             break
 
     assert repository.get(str(incident.id)).status == IncidentStatus.AWAITING_APPROVAL
+
+
+@pytest.mark.asyncio
+async def test_job_manager_sanitizes_and_audits_investigation_failure() -> None:
+    class FailingInvestigator:
+        async def investigate(self, incident: Incident) -> AnalysisOutcome:
+            raise RuntimeError("sensitive upstream detail")
+
+    incident = Incident(
+        alert_name="HighErrorRate",
+        alert_fingerprint="job-failure-test",
+        service="checkout",
+        namespace="demo",
+        started_at=datetime(2026, 8, 28, tzinfo=UTC),
+    )
+    repository = IncidentRepository()
+    repository.create_or_get_active(incident)
+    audit = AuditRepository()
+    manager = InvestigationJobManager(FailingInvestigator(), repository, audit)
+
+    queued = manager.enqueue(incident)
+    for _ in range(20):
+        await asyncio.sleep(0)
+        current = manager.get(queued.id)
+        if current and current.status == JobStatus.FAILED:
+            break
+
+    assert current.error == "RuntimeError"
+    assert "sensitive" not in current.model_dump_json()
+    events = audit.list_for_incident(incident.id)
+    assert events[-1].event_type == AuditEventType.DIAGNOSTIC_FAILED
+    assert events[-1].payload == {
+        "error_type": "RuntimeError",
+        "job_id": str(queued.id),
+    }

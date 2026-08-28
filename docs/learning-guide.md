@@ -86,7 +86,7 @@ Kubernetes 或 Prometheus 调查失败时，同步接口返回经过清理的 HT
 
 阅读 `app/agent/jobs.py`、`app/api/jobs.py` 和 [ADR-0013](adr/0013-async-investigation-jobs.md)。
 
-长调查通过 `POST /incidents/{incident_id}/investigate/jobs` 返回 Job ID，再用 `GET /investigation/jobs/{job_id}` 查询状态。应用成功装配 Kubernetes 和 Prometheus 调查依赖时会自动创建任务管理器；异步调查同样推进 `investigating` 和 `awaiting_approval` 事故状态。当前任务本身仍保存在进程内，重启会丢失；后续生产部署可以替换为 Redis 或消息队列而不改变 HTTP 契约。
+长调查通过 `POST /incidents/{incident_id}/investigate/jobs` 返回 Job ID，再用 `GET /investigation/jobs/{job_id}` 查询状态。应用成功装配 Kubernetes 和 Prometheus 调查依赖时会自动创建任务管理器；异步调查同样推进 `investigating` 和 `awaiting_approval` 事故状态。失败任务只暴露异常类型，并写入带 Job ID 的 `diagnostic.failed` 审计事件，不泄露上游错误正文。当前任务本身仍保存在进程内，重启会丢失；后续生产部署可以替换为 Redis 或消息队列而不改变 HTTP 契约。
 
 ## 10. 理解部署边界
 
