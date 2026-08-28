@@ -33,6 +33,8 @@ def test_create_proposal_and_approval_endpoints() -> None:
     assert proposal.status_code == 201
     assert approval.status_code == 201
     assert approval.json()["proposal_id"] == proposal_id
+    assert client.get(f"/remediation/proposals/{proposal_id}").status_code == 200
+    assert client.get(f"/remediation/approvals/{approval.json()['id']}").status_code == 200
 
 
 def test_approval_rejects_unknown_proposal() -> None:

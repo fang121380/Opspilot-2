@@ -72,6 +72,14 @@ async def create_proposal(
     return proposal
 
 
+@router.get("/remediation/proposals/{proposal_id}", response_model=RemediationProposal)
+async def get_proposal(proposal_id: UUID, repository: RepositoryDependency) -> RemediationProposal:
+    proposal = repository.get_proposal(proposal_id)
+    if proposal is None:
+        raise HTTPException(status_code=404, detail="remediation proposal not found")
+    return proposal
+
+
 @router.post(
     "/remediation/proposals/{proposal_id}/approval", response_model=Approval, status_code=201
 )
@@ -101,6 +109,14 @@ async def approve_proposal(
         incident_id=proposal.incident_id,
         payload=approval.model_dump(mode="json"),
     )
+    return approval
+
+
+@router.get("/remediation/approvals/{approval_id}", response_model=Approval)
+async def get_approval(approval_id: UUID, repository: RepositoryDependency) -> Approval:
+    approval = repository.get_approval(approval_id)
+    if approval is None:
+        raise HTTPException(status_code=404, detail="remediation approval not found")
     return approval
 
 
