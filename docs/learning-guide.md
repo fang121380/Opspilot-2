@@ -1,50 +1,61 @@
-# Opspilot 2 Learning Guide
+# Opspilot 2 学习指南
 
-This guide explains the project in the order an interviewer or contributor should read it.
+建议按下面的顺序阅读项目。每一节都对应一个工程概念和一组可以运行的测试。
 
-## 1. Start with the incident boundary
+## 1. 先看事故边界
 
-Read [product-scope.md](product-scope.md) and [ADR-0001](adr/0001-mvp-boundary.md). The MVP deliberately focuses on one scenario: a deployment regression that causes a high HTTP 5xx alert.
+阅读 [产品范围](product-scope.md) 和 [ADR-0001](adr/0001-mvp-boundary.md)。MVP 只处理一种完整场景：一次错误 Deployment 发布导致 HTTP 5xx 告警。
 
-Why this matters: a portfolio project is stronger when it finishes one production-shaped workflow than when it lists many integrations without a demonstrated safety boundary.
+这个限制是有意的。一个能跑完、能测试、能说明安全边界的生产型流程，比堆积很多未验证的集成更适合作为面试项目。
 
-## 2. Follow an alert into an incident
+## 2. 从告警跟踪到事故
 
-Read `app/api/prometheus.py` and `app/domain/incidents.py`.
+阅读 `app/api/prometheus.py` 和 `app/domain/incidents.py`。
 
-- `AlertmanagerWebhook` accepts a Prometheus Alertmanager-compatible payload.
-- The API normalizes provider-specific JSON into `Incident` immediately.
-- Alert fingerprints deduplicate active incidents.
+- `AlertmanagerWebhook` 接收 Prometheus Alertmanager 兼容格式。
+- API 在边界处把供应商 JSON 转成内部 `Incident` 模型。
+- 通过告警 fingerprint 对活动告警去重。
 
-The key interview concept is **idempotency**: monitoring systems resend alerts, so a receiver must not create an unbounded number of identical incidents.
+这里的核心概念是**幂等性**：监控系统会重复发送告警，接收端不能为同一个活动故障无限创建事故。
 
-## 3. Inspect the read-only adapters
+## 3. 检查只读适配器
 
-Read `app/adapters/prometheus.py` and `app/adapters/kubernetes.py`.
+阅读 `app/adapters/prometheus.py` 和 `app/adapters/kubernetes.py`。
 
-- Prometheus supports only `GET /api/v1/query` and converts vectors into typed samples.
-- Kubernetes diagnostics read deployment status, pod summaries, and bounded log tails.
-- No adapter takes a shell command, accesses Secrets, or mutates cluster state.
+- Prometheus 适配器只开放 `GET /api/v1/query`，并把结果转成类型化样本。
+- Kubernetes 适配器只读取 Deployment 状态、Pod 摘要和有行数上限的日志。
+- 没有适配器接受任意 Shell 命令、读取 Secret 或修改集群。
 
-The key concept is **capability design**: an agent should receive only the smallest API surface needed for its job.
+这里的核心概念是**能力最小化**：Agent 只能得到完成任务所必需的最小 API 表面。
 
-## 4. Understand evidence-gated analysis
+## 4. 理解证据门控分析
 
-Read `app/agent/analysis.py` and [ADR-0003](adr/0003-evidence-gated-remediation.md).
+阅读 `app/agent/analysis.py` 和 [ADR-0003](adr/0003-evidence-gated-remediation.md)。
 
-The initial analyzer is deterministic. It suggests a rollback only when deployment availability is reduced, HTTP 5xx is non-zero, and logs contain an error signal. This creates a baseline that is straightforward to test before using an LLM.
+初始分析器是确定性的。只有 Deployment 可用副本减少、HTTP 5xx 非零、近期日志包含错误信号这三个条件同时满足时，才建议回滚。
 
-The key concept is **grounded reasoning**: a model can later explain evidence, but must not invent the evidence or authorise a mutation.
+这里的核心概念是**基于证据的推理**：以后可以让 LLM 帮助总结，但模型不能伪造证据，也不能直接授权变更。
 
-## 5. Trace the approval gate
+## 5. 跟踪审批安全边界
 
-Read `app/policy/remediation.py` and [ADR-0004](adr/0004-approval-gated-execution.md).
+阅读 `app/policy/remediation.py` 和 [ADR-0004](adr/0004-approval-gated-execution.md)。
 
-An operation reaches the rollback client only if it is allowlisted, targets a permitted namespace, has a matching approval, and that approval has not expired.
+操作只有同时满足动作白名单、命名空间范围、精确 proposal ID 匹配和审批未过期，才会到达回滚客户端。
 
-The key concept is **defence in depth**: approval alone is insufficient; policy scope, proposal binding, and expiry prevent common replay and overreach failures.
+这里的核心概念是**纵深防御**：单独的审批不足以防止越权、误绑定和过期重放。
 
-## 6. Run the checks
+## 6. 理解审计和追踪
+
+阅读 `app/storage/audit.py`、`app/observability/tracing.py` 和 `app/api/prometheus.py`。
+
+- 每次告警接收都会留下结构化审计事件。
+- 审计事件包含类型、负载、时间和关联 ID。
+- 配置 OpenTelemetry SDK 时，关联 ID 来自活动 Span；没有 Collector 时使用本地唯一 ID，不能把它误称为已导出的分布式 Trace。
+- `GET /incidents/{incident_id}/audit` 可以查询事故事件时间线。
+
+这里的核心概念是**可追溯性**：发生误判时，必须知道系统收到了什么、查了什么、为什么做出决定。
+
+## 7. 运行检查
 
 ```bash
 make test
@@ -52,5 +63,5 @@ make coverage
 make lint
 ```
 
-The unit tests are intentionally offline. They prove domain, policy, and adapter behavior before a cluster or LLM API is introduced. The Kind drill and integration environment are later milestones.
+单元测试不依赖 Kubernetes 集群或在线 LLM。Kind 故障演练和真实 Collector 属于后续集成阶段。
 

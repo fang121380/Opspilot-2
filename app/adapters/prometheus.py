@@ -6,6 +6,8 @@ from urllib.parse import urljoin
 import httpx
 from pydantic import BaseModel, Field
 
+from app.observability.tracing import traced
+
 
 class PrometheusQueryError(RuntimeError):
     """Raised when Prometheus cannot produce a valid instant-query response."""
@@ -35,49 +37,52 @@ class PrometheusMetricsAdapter:
         self._client = client
 
     async def instant_query(self, query: str, *, at: datetime | None = None) -> MetricQueryResult:
-        params: dict[str, str] = {"query": query}
-        if at is not None:
-            params["time"] = at.astimezone(UTC).isoformat().replace("+00:00", "Z")
+        with traced("prometheus.instant_query") as span:
+            span.set_attribute("prometheus.query_length", len(query))
+            params: dict[str, str] = {"query": query}
+            if at is not None:
+                params["time"] = at.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
-        try:
-            response = await self._client.get(
-                urljoin(self._base_url, "api/v1/query"), params=params, timeout=10.0
-            )
-        except httpx.HTTPError as error:
-            raise PrometheusQueryError(f"Prometheus request failed: {error}") from error
-
-        if response.status_code != httpx.codes.OK:
-            raise PrometheusQueryError(f"Prometheus returned HTTP {response.status_code}")
-
-        try:
-            payload = response.json()
-        except ValueError as error:
-            raise PrometheusQueryError("Prometheus returned invalid JSON") from error
-
-        if payload.get("status") != "success":
-            detail = payload.get("error", "unknown Prometheus API error")
-            raise PrometheusQueryError(f"Prometheus query failed: {detail}")
-
-        data = payload.get("data", {})
-        if data.get("resultType") != "vector":
-            raise PrometheusQueryError(
-                f"unsupported result type: {data.get('resultType', 'missing')}"
-            )
-
-        samples: list[MetricSample] = []
-        for result in data.get("result", []):
             try:
-                timestamp, value = result["value"]
-                samples.append(
-                    MetricSample(
-                        labels=result.get("metric", {}),
-                        timestamp=datetime.fromtimestamp(float(timestamp), tz=UTC),
-                        value=float(value),
-                    )
+                response = await self._client.get(
+                    urljoin(self._base_url, "api/v1/query"), params=params, timeout=10.0
                 )
-            except (KeyError, TypeError, ValueError) as error:
-                raise PrometheusQueryError(
-                    "Prometheus returned an invalid vector sample"
-                ) from error
+            except httpx.HTTPError as error:
+                span.record_exception(error)
+                raise PrometheusQueryError(f"Prometheus request failed: {error}") from error
 
-        return MetricQueryResult(query=query, samples=samples)
+            if response.status_code != httpx.codes.OK:
+                raise PrometheusQueryError(f"Prometheus returned HTTP {response.status_code}")
+
+            try:
+                payload = response.json()
+            except ValueError as error:
+                raise PrometheusQueryError("Prometheus returned invalid JSON") from error
+
+            if payload.get("status") != "success":
+                detail = payload.get("error", "unknown Prometheus API error")
+                raise PrometheusQueryError(f"Prometheus query failed: {detail}")
+
+            data = payload.get("data", {})
+            if data.get("resultType") != "vector":
+                raise PrometheusQueryError(
+                    f"unsupported result type: {data.get('resultType', 'missing')}"
+                )
+
+            samples: list[MetricSample] = []
+            for result in data.get("result", []):
+                try:
+                    timestamp, value = result["value"]
+                    samples.append(
+                        MetricSample(
+                            labels=result.get("metric", {}),
+                            timestamp=datetime.fromtimestamp(float(timestamp), tz=UTC),
+                            value=float(value),
+                        )
+                    )
+                except (KeyError, TypeError, ValueError) as error:
+                    raise PrometheusQueryError(
+                        "Prometheus returned an invalid vector sample"
+                    ) from error
+
+            return MetricQueryResult(query=query, samples=samples)

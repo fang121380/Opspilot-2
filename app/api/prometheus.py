@@ -4,11 +4,14 @@ import hashlib
 import json
 from datetime import datetime
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.domain.incidents import Incident
+from app.observability.tracing import current_trace_id, traced
+from app.storage.audit import AuditEvent, AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
 
 router = APIRouter(tags=["alerts"])
@@ -45,7 +48,12 @@ def repository_from_request(request: Request) -> IncidentRepository:
     return request.app.state.incident_repository
 
 
+def audit_repository_from_request(request: Request) -> AuditRepository:
+    return request.app.state.audit_repository
+
+
 RepositoryDependency = Annotated[IncidentRepository, Depends(repository_from_request)]
+AuditDependency = Annotated[AuditRepository, Depends(audit_repository_from_request)]
 
 
 def alert_fingerprint(alert: AlertmanagerAlert) -> str:
@@ -83,19 +91,49 @@ def normalize_incident(alert: AlertmanagerAlert) -> Incident:
 async def receive_prometheus_webhook(
     webhook: AlertmanagerWebhook,
     repository: RepositoryDependency,
+    audit_repository: AuditDependency,
 ) -> IncidentReceipt:
-    firing_alerts = [alert for alert in webhook.alerts if alert.status == "firing"]
-    if not firing_alerts:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="webhook contains no firing alerts",
-        )
+    with traced("alertmanager.webhook"):
+        firing_alerts = [alert for alert in webhook.alerts if alert.status == "firing"]
+        if not firing_alerts:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="webhook contains no firing alerts",
+            )
 
-    incident = normalize_incident(firing_alerts[0])
-    stored_incident, deduplicated = repository.create_or_get_active(incident)
-    return IncidentReceipt(incident=stored_incident, deduplicated=deduplicated)
+        incident = normalize_incident(firing_alerts[0])
+        trace_id = current_trace_id()
+        audit_repository.append(
+            event_type=AuditEventType.ALERT_RECEIVED,
+            incident_id=incident.id,
+            trace_id=trace_id,
+            payload={"alert_name": incident.alert_name, "fingerprint": incident.alert_fingerprint},
+        )
+        stored_incident, deduplicated = repository.create_or_get_active(incident)
+        audit_repository.append(
+            event_type=(
+                AuditEventType.INCIDENT_DEDUPLICATED
+                if deduplicated
+                else AuditEventType.INCIDENT_CREATED
+            ),
+            incident_id=stored_incident.id,
+            trace_id=trace_id,
+            payload={"status": stored_incident.status.value},
+        )
+        return IncidentReceipt(incident=stored_incident, deduplicated=deduplicated)
 
 
 @router.get("/incidents", response_model=list[Incident])
 async def list_incidents(repository: RepositoryDependency) -> list[Incident]:
     return repository.list()
+
+
+@router.get("/incidents/{incident_id}/audit", response_model=list[AuditEvent])
+async def list_incident_audit(
+    incident_id: UUID,
+    repository: RepositoryDependency,
+    audit_repository: AuditDependency,
+) -> list[AuditEvent]:
+    if not any(incident.id == incident_id for incident in repository.list()):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident not found")
+    return audit_repository.list_for_incident(incident_id)

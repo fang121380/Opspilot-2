@@ -86,3 +86,23 @@ def test_lists_created_incidents(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json() == [created.json()["incident"]]
+
+
+def test_lists_audit_events_for_an_incident(client: TestClient) -> None:
+    created = client.post("/webhooks/prometheus", json=alertmanager_payload())
+    incident_id = created.json()["incident"]["id"]
+
+    response = client.get(f"/incidents/{incident_id}/audit")
+
+    assert response.status_code == 200
+    assert [event["event_type"] for event in response.json()] == [
+        "alert.received",
+        "incident.created",
+    ]
+    assert all(len(event["trace_id"]) == 32 for event in response.json())
+
+
+def test_returns_not_found_for_unknown_incident_audit(client: TestClient) -> None:
+    response = client.get("/incidents/00000000-0000-0000-0000-000000000000/audit")
+
+    assert response.status_code == 404
