@@ -49,7 +49,7 @@
 
 这里的核心概念是**纵深防御**：单独的审批不足以防止越权、误绑定和过期重放。
 
-审批 API 在 `app/api/remediation.py`：提案、审批和执行是三个独立操作。默认应用没有执行器，执行接口会返回 503；只有显式注入执行器后，且请求带有匹配审批，才可能触达 Kubernetes 客户端。
+审批 API 在 `app/api/remediation.py`：提案、审批和执行是三个独立操作。审批和执行还要求 `app/security/auth.py` 验证 Bearer 凭据；`approved_by` 只取服务端映射身份，客户端多传该字段会被拒绝。默认应用既没有执行器也没有认证器，写路径保持关闭；只有两者都显式配置、执行者与审批者相同且请求带有匹配审批，才可能触达 Kubernetes 客户端。设计见 [ADR-0016](adr/0016-authenticate-privileged-operator-actions.md)。
 
 Kubernetes 写调用抛出异常时，系统不能判断请求是否已被集群部分接受，因此事故保守停留在 `executing`，返回脱敏 503 并记录 `remediation.failed`。它不会自动重试或把状态退回审批阶段，必须由操作员核对 Deployment 和审计记录。
 

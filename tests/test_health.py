@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app, create_app
+from app.security.auth import BearerTokenAuthenticator
 
 client = TestClient(app)
 
@@ -23,6 +24,7 @@ def test_readiness_reports_missing_workflow_dependencies() -> None:
         "missing_dependencies": [
             "investigator",
             "job_manager",
+            "operator_authenticator",
             "remediation_executor",
             "verifier",
         ],
@@ -37,6 +39,9 @@ def test_readiness_succeeds_when_workflow_dependencies_are_wired() -> None:
             job_manager=dependency,
             remediation_executor=dependency,
             verifier=dependency,
+            operator_authenticator=BearerTokenAuthenticator(
+                token="readiness-token", subject="readiness-operator"
+            ),
         )
     )
 

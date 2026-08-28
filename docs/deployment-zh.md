@@ -50,7 +50,20 @@ Kind 演练清单在 `infra/kind/`，脚本说明见 [Kind 故障演练](kind-de
 | `OPSPILOT_ENVIRONMENT` | 运行环境标识 | `development` |
 | `OPSPILOT_DATABASE_URL` | SQLAlchemy PostgreSQL 连接串 | 未设置，使用内存存储 |
 | `OPSPILOT_PROMETHEUS_URL` | Prometheus 地址 | 未设置 |
+| `OPSPILOT_OPERATOR_ID` | 可信审批操作员身份 | 未设置，审批和执行关闭 |
+| `OPSPILOT_OPERATOR_TOKEN` | 操作员 Bearer Secret | 未设置，审批和执行关闭 |
 
 设置 `OPSPILOT_PROMETHEUS_URL` 后，应用启动时先尝试集群内 ServiceAccount 配置，再尝试当前用户 kubeconfig；成功时自动装配 Kubernetes 只读适配器、Prometheus 适配器和调查编排器。关闭应用时会关闭 HTTP 和 Kubernetes 客户端。
 
 没有设置外部依赖时，API 仍可以接收告警和运行离线测试；调查接口会返回 503，而不是伪造诊断结果。
+
+## 操作员认证
+
+审批与执行端点默认关闭。部署时必须从 Secret 同时设置：
+
+```bash
+OPSPILOT_OPERATOR_ID=on-call@example.com
+OPSPILOT_OPERATOR_TOKEN=<long-random-secret>
+```
+
+调用方使用 `Authorization: Bearer <token>`。服务端用常量时间比较验证令牌，并把 `OPSPILOT_OPERATOR_ID` 写入不可由客户端覆盖的 `approved_by` 审计字段；两个变量只配置一个时应用拒绝启动。静态令牌适合本项目的单操作员演示边界，生产平台下一步应替换为 OIDC/JWT 验签与细粒度 RBAC，而不再依赖共享秘密。

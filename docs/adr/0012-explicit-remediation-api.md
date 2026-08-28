@@ -29,4 +29,4 @@ Positive:
 Trade-offs:
 
 - A persistent proposal/approval repository is still needed for multi-process production deployment.
-- Authentication of `approved_by` is deferred; the MVP treats it as an input field, not an identity proof.
+- The original unauthenticated `approved_by` input has been replaced by the authenticated identity described in ADR-0016.

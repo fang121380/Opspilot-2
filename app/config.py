@@ -14,6 +14,8 @@ class Settings:
     allowed_remediation_namespaces: str = os.getenv(
         "OPSPILOT_ALLOWED_REMEDIATION_NAMESPACES", "demo"
     )
+    operator_token: str | None = os.getenv("OPSPILOT_OPERATOR_TOKEN")
+    operator_id: str | None = os.getenv("OPSPILOT_OPERATOR_ID")
 
     def remediation_namespaces(self) -> set[str]:
         """返回去除空值后的显式回滚命名空间集合。"""

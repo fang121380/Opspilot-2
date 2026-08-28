@@ -20,6 +20,7 @@ from app.config import settings
 from app.executor.kubernetes import KubernetesRollbackClient
 from app.observability.metrics import metrics_app
 from app.policy.remediation import RemediationExecutor, RemediationPolicy
+from app.security.auth import BearerTokenAuthenticator
 from app.storage.audit import AuditRepository
 from app.storage.incidents import IncidentRepository
 from app.storage.remediation import RemediationRepository
@@ -37,6 +38,7 @@ def create_app(
     remediation_repository: RemediationRepository | None = None,
     job_manager: object | None = None,
     verifier: object | None = None,
+    operator_authenticator: BearerTokenAuthenticator | None = None,
     database_url: str | None = None,
 ) -> FastAPI:
     relational_store = (
@@ -109,6 +111,11 @@ def create_app(
         else None
     )
     app.state.verifier = verifier
+    app.state.operator_authenticator = (
+        operator_authenticator
+        if operator_authenticator is not None
+        else runtime_operator_authenticator()
+    )
 
     @app.get("/health", tags=["system"])
     async def health() -> dict[str, str]:
@@ -123,6 +130,7 @@ def create_app(
         dependencies = {
             "investigator": app.state.investigator,
             "job_manager": app.state.job_manager,
+            "operator_authenticator": app.state.operator_authenticator,
             "remediation_executor": app.state.remediation_executor,
             "verifier": app.state.verifier,
         }
@@ -151,6 +159,21 @@ def runtime_remediation_executor(
     return RemediationExecutor(
         policy=RemediationPolicy(allowed_namespaces=allowed_namespaces),
         rollback_client=KubernetesRollbackClient(apps_api),
+    )
+
+
+def runtime_operator_authenticator() -> BearerTokenAuthenticator | None:
+    """Build fail-closed operator authentication from deployment secrets."""
+
+    if not settings.operator_token and not settings.operator_id:
+        return None
+    if not settings.operator_token or not settings.operator_id:
+        raise RuntimeError(
+            "OPSPILOT_OPERATOR_TOKEN and OPSPILOT_OPERATOR_ID must be configured together"
+        )
+    return BearerTokenAuthenticator(
+        token=settings.operator_token,
+        subject=settings.operator_id,
     )
 
 

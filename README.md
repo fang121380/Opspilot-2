@@ -53,6 +53,7 @@ make run
 - 固定调查编排：Deployment → Pod → 日志 → HTTP 5xx → 证据分析。
 - 只有 HTTP 5xx 非零且匹配 Pod 的错误日志同时出现时才建议回滚；Pod Ready 不等于业务健康。
 - 独立的提案、审批和执行 API；执行阶段只接受服务端保存的 proposal/approval ID。
+- 审批和执行 Bearer 认证；`approved_by` 只能来自服务端凭据映射，不能由请求伪造。
 - 动作白名单、命名空间范围、审批匹配、审批过期四层防护。
 - 使用当前 Kubernetes AppsV1 API 从前一 ReplicaSet 模板回滚 Deployment。
 - OpenTelemetry 关联 ID、结构化审计时间线和 Prometheus 服务指标。
@@ -68,8 +69,8 @@ make run
 ## 当前验证
 
 ```text
-87 个单元/集成测试通过
-代码覆盖率 90.84%
+99 个单元/集成测试通过
+代码覆盖率 91.35%
 Ruff 静态检查通过
 离线评测 4/4 通过
 kubectl v1.37.0 和 kind v0.33.0 已验证

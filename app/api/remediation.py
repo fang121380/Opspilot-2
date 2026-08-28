@@ -4,8 +4,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, field_validator
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.domain.incidents import IncidentStatus
 from app.domain.kubernetes import is_dns_label
@@ -18,6 +18,11 @@ from app.policy.remediation import (
     PolicyDeniedError,
     RemediationExecutor,
     RemediationProposal,
+)
+from app.security.auth import (
+    BearerTokenAuthenticator,
+    OperatorAuthenticationError,
+    OperatorPrincipal,
 )
 from app.storage.audit import AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
@@ -41,7 +46,8 @@ class CreateProposalRequest(BaseModel):
 
 
 class ApprovalRequest(BaseModel):
-    approved_by: str
+    model_config = ConfigDict(extra="forbid")
+
     expires_in_minutes: int = 15
 
 
@@ -66,12 +72,30 @@ def incident_repository_from_request(request: Request) -> IncidentRepository:
     return request.app.state.incident_repository
 
 
+def operator_from_request(
+    request: Request,
+    authorization: Annotated[str | None, Header()] = None,
+) -> OperatorPrincipal:
+    authenticator: BearerTokenAuthenticator | None = request.app.state.operator_authenticator
+    if authenticator is None:
+        raise HTTPException(status_code=503, detail="operator authentication is not configured")
+    try:
+        return authenticator.authenticate(authorization)
+    except OperatorAuthenticationError as error:
+        raise HTTPException(
+            status_code=401,
+            detail=str(error),
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from error
+
+
 AuditDependency = Annotated[AuditRepository, Depends(audit_from_request)]
 ExecutorDependency = Annotated[RemediationExecutor | None, Depends(executor_from_request)]
 RepositoryDependency = Annotated[RemediationRepository, Depends(repository_from_request)]
 IncidentRepositoryDependency = Annotated[
     IncidentRepository, Depends(incident_repository_from_request)
 ]
+OperatorDependency = Annotated[OperatorPrincipal, Depends(operator_from_request)]
 
 
 @router.post("/remediation/proposals", response_model=RemediationProposal, status_code=201)
@@ -127,18 +151,17 @@ async def approve_proposal(
     payload: ApprovalRequest,
     audit_repository: AuditDependency,
     repository: RepositoryDependency,
+    operator: OperatorDependency,
 ) -> Approval:
     proposal = repository.get_proposal(proposal_id)
     if proposal is None:
         raise HTTPException(status_code=404, detail="remediation proposal not found")
-    if not payload.approved_by.strip():
-        raise HTTPException(status_code=422, detail="approved_by must not be empty")
     if not 1 <= payload.expires_in_minutes <= 60:
         raise HTTPException(status_code=422, detail="expires_in_minutes must be between 1 and 60")
     now = datetime.now(UTC)
     approval = Approval(
         proposal_id=proposal_id,
-        approved_by=payload.approved_by,
+        approved_by=operator.subject,
         approved_at=now,
         expires_at=now + timedelta(minutes=payload.expires_in_minutes),
     )
@@ -162,6 +185,7 @@ async def get_approval(approval_id: UUID, repository: RepositoryDependency) -> A
 @router.post("/remediation/execute", response_model=ExecutionResult)
 async def execute_remediation(
     request: ExecuteRequest,
+    operator: OperatorDependency,
     executor: ExecutorDependency = None,
     repository: RepositoryDependency = None,
     audit_repository: AuditDependency = None,
@@ -175,6 +199,8 @@ async def execute_remediation(
     approval = repository.get_approval(request.approval_id) if request.approval_id else None
     if request.approval_id and approval is None:
         raise HTTPException(status_code=404, detail="remediation approval not found")
+    if approval is not None and approval.approved_by != operator.subject:
+        raise HTTPException(status_code=403, detail="approval belongs to a different operator")
     if incident_repository.get(str(proposal.incident_id)) is None:
         raise HTTPException(status_code=404, detail="incident not found")
     claimed = incident_repository.transition_status(

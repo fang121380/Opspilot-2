@@ -6,7 +6,19 @@ from fastapi.testclient import TestClient
 from app.domain.incidents import Incident
 from app.main import create_app
 from app.policy.remediation import RemediationExecutor, RemediationPolicy
+from app.security.auth import BearerTokenAuthenticator
 from app.storage.incidents import IncidentRepository
+
+TEST_AUTHENTICATOR = BearerTokenAuthenticator(
+    token="test-operator-token", subject="test-operator"
+)
+AUTHORIZATION = {"Authorization": "Bearer test-operator-token"}
+
+
+def authenticated_client(app: object) -> TestClient:
+    client = TestClient(app)
+    client.headers.update(AUTHORIZATION)
+    return client
 
 
 class FakeRollbackClient:
@@ -40,13 +52,15 @@ def app_with_incident(
         )
     )
     return create_app(
-        incident_repository=repository, remediation_executor=remediation_executor
+        incident_repository=repository,
+        remediation_executor=remediation_executor,
+        operator_authenticator=TEST_AUTHENTICATOR,
     )
 
 
 def test_create_proposal_and_approval_endpoints() -> None:
     incident_id = uuid4()
-    client = TestClient(app_with_incident(incident_id))
+    client = authenticated_client(app_with_incident(incident_id))
 
     proposal = client.post(
         "/remediation/proposals",
@@ -60,23 +74,26 @@ def test_create_proposal_and_approval_endpoints() -> None:
     proposal_id = proposal.json()["id"]
     approval = client.post(
         f"/remediation/proposals/{proposal_id}/approval",
-        json={"approved_by": "operator", "expires_in_minutes": 10},
+        json={"expires_in_minutes": 10},
     )
 
     assert proposal.status_code == 201
     assert approval.status_code == 201
     assert approval.json()["proposal_id"] == proposal_id
+    assert approval.json()["approved_by"] == "test-operator"
     assert client.get(f"/remediation/proposals/{proposal_id}").status_code == 200
     assert client.get(f"/remediation/approvals/{approval.json()['id']}").status_code == 200
     assert client.get("/incidents").json()[0]["status"] == "awaiting_approval"
 
 
 def test_approval_rejects_unknown_proposal() -> None:
-    client = TestClient(create_app())
+    client = authenticated_client(
+        create_app(operator_authenticator=TEST_AUTHENTICATOR)
+    )
 
     response = client.post(
         f"/remediation/proposals/{uuid4()}/approval",
-        json={"approved_by": "operator", "expires_in_minutes": 10},
+        json={"expires_in_minutes": 10},
     )
 
     assert response.status_code == 404
@@ -101,7 +118,7 @@ def test_create_proposal_rejects_unknown_incident() -> None:
 
 def test_create_proposal_rejects_scope_different_from_incident() -> None:
     incident_id = uuid4()
-    client = TestClient(app_with_incident(incident_id))
+    client = authenticated_client(app_with_incident(incident_id))
 
     wrong_namespace = client.post(
         "/remediation/proposals",
@@ -129,7 +146,7 @@ def test_create_proposal_rejects_scope_different_from_incident() -> None:
 
 def test_create_proposal_rejects_unbounded_kubernetes_name() -> None:
     incident_id = uuid4()
-    client = TestClient(app_with_incident(incident_id))
+    client = authenticated_client(app_with_incident(incident_id))
 
     response = client.post(
         "/remediation/proposals",
@@ -145,7 +162,9 @@ def test_create_proposal_rejects_unbounded_kubernetes_name() -> None:
 
 
 def test_execute_endpoint_is_disabled_without_injected_executor() -> None:
-    client = TestClient(create_app())
+    client = authenticated_client(
+        create_app(operator_authenticator=TEST_AUTHENTICATOR)
+    )
 
     response = client.post("/remediation/execute", json={"proposal_id": str(uuid4())})
 
@@ -158,7 +177,9 @@ def test_execute_endpoint_runs_only_with_explicit_executor_and_approval() -> Non
         policy=RemediationPolicy(allowed_namespaces={"demo"}), rollback_client=rollback_client
     )
     incident_id = uuid4()
-    client = TestClient(app_with_incident(incident_id, remediation_executor=executor))
+    client = authenticated_client(
+        app_with_incident(incident_id, remediation_executor=executor)
+    )
     proposal = client.post(
         "/remediation/proposals",
         json={
@@ -170,7 +191,7 @@ def test_execute_endpoint_runs_only_with_explicit_executor_and_approval() -> Non
     ).json()
     approval = client.post(
         f"/remediation/proposals/{proposal['id']}/approval",
-        json={"approved_by": "operator", "expires_in_minutes": 10},
+        json={"expires_in_minutes": 10},
     ).json()
 
     response = client.post(
@@ -205,7 +226,9 @@ def test_execute_without_approval_keeps_incident_awaiting_approval() -> None:
         policy=RemediationPolicy(allowed_namespaces={"demo"}), rollback_client=FakeRollbackClient()
     )
     incident_id = uuid4()
-    client = TestClient(app_with_incident(incident_id, remediation_executor=executor))
+    client = authenticated_client(
+        app_with_incident(incident_id, remediation_executor=executor)
+    )
     proposal = client.post(
         "/remediation/proposals",
         json={
@@ -224,13 +247,15 @@ def test_execute_without_approval_keeps_incident_awaiting_approval() -> None:
     assert client.get("/incidents").json()[0]["status"] == "awaiting_approval"
 
 
-def test_execute_failure_is_sanitized_and_keeps_uncertain_state() -> None:
+def test_execute_rejects_operator_different_from_approver() -> None:
+    rollback_client = FakeRollbackClient()
     executor = RemediationExecutor(
         policy=RemediationPolicy(allowed_namespaces={"demo"}),
-        rollback_client=FailingRollbackClient(),
+        rollback_client=rollback_client,
     )
     incident_id = uuid4()
-    client = TestClient(app_with_incident(incident_id, remediation_executor=executor))
+    application = app_with_incident(incident_id, remediation_executor=executor)
+    client = authenticated_client(application)
     proposal = client.post(
         "/remediation/proposals",
         json={
@@ -242,7 +267,44 @@ def test_execute_failure_is_sanitized_and_keeps_uncertain_state() -> None:
     ).json()
     approval = client.post(
         f"/remediation/proposals/{proposal['id']}/approval",
-        json={"approved_by": "operator", "expires_in_minutes": 10},
+        json={"expires_in_minutes": 10},
+    ).json()
+    application.state.operator_authenticator = BearerTokenAuthenticator(
+        token="other-token", subject="other-operator"
+    )
+
+    response = client.post(
+        "/remediation/execute",
+        headers={"Authorization": "Bearer other-token"},
+        json={"proposal_id": proposal["id"], "approval_id": approval["id"]},
+    )
+
+    assert response.status_code == 403
+    assert rollback_client.calls == 0
+    assert client.get("/incidents").json()[0]["status"] == "awaiting_approval"
+
+
+def test_execute_failure_is_sanitized_and_keeps_uncertain_state() -> None:
+    executor = RemediationExecutor(
+        policy=RemediationPolicy(allowed_namespaces={"demo"}),
+        rollback_client=FailingRollbackClient(),
+    )
+    incident_id = uuid4()
+    client = authenticated_client(
+        app_with_incident(incident_id, remediation_executor=executor)
+    )
+    proposal = client.post(
+        "/remediation/proposals",
+        json={
+            "incident_id": str(incident_id),
+            "action": "rollback_deployment",
+            "namespace": "demo",
+            "deployment": "checkout",
+        },
+    ).json()
+    approval = client.post(
+        f"/remediation/proposals/{proposal['id']}/approval",
+        json={"expires_in_minutes": 10},
     ).json()
 
     response = client.post(

@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLUSTER_NAME="opspilot-2"
+SECRETS_DIR="$ROOT_DIR/.secrets"
+OPERATOR_TOKEN_FILE="$SECRETS_DIR/opspilot-kind-token"
 
 # Docker Desktop 首次安装时可能尚未创建 /usr/local/bin/docker 软链接。
 # 只在 macOS 官方安装位置存在 CLI 时补充当前脚本的 PATH，不影响其他环境。
@@ -20,6 +22,15 @@ case "${1:-up}" in
     kind load docker-image --name "$CLUSTER_NAME" opspilot-2/api:dev
     kind load docker-image --name "$CLUSTER_NAME" opspilot-2/checkout:dev
     kubectl apply -f "$ROOT_DIR/infra/kind/namespace.yaml"
+    mkdir -p "$SECRETS_DIR"
+    if [[ ! -s "$OPERATOR_TOKEN_FILE" ]]; then
+      umask 077
+      openssl rand -hex 32 >"$OPERATOR_TOKEN_FILE"
+    fi
+    kubectl -n demo create secret generic opspilot-2-operator-auth \
+      --from-literal=token="$(<"$OPERATOR_TOKEN_FILE")" \
+      --from-literal=operator-id="kind-operator" \
+      --dry-run=client -o yaml | kubectl apply -f -
     kubectl apply -f "$ROOT_DIR/infra/kind/opspilot-rbac.yaml"
     kubectl apply -f "$ROOT_DIR/infra/kind/checkout-v1.yaml"
     # 旧版演练曾创建集群级 Prometheus RBAC；仅清理本项目的已知旧对象。

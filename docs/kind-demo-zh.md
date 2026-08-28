@@ -20,6 +20,8 @@ make run
 
 脚本会创建两节点 Kind 集群、构建 API 与演示服务镜像、加载镜像、部署 checkout、Prometheus、Alertmanager 和 Opspilot 2 API，并等待 Deployment 就绪。Alertmanager 只转发 firing 告警到集群内 API；事件关闭仍由 Opspilot 的验证工作流负责。
 
+启动时脚本会在 `.secrets/opspilot-kind-token` 生成权限为当前用户可读的随机操作员令牌，并创建集群内 Secret。该目录已被 Git 忽略；令牌不会写入镜像、清单或提交历史。
+
 `infra/kind/opspilot-rbac.yaml` 创建了专用 `opspilot-2` ServiceAccount。它只可读取 demo 命名空间中的 Deployment、ReplicaSet、Pod 和 Pod 日志，并且仅能 patch Deployment 用于审批后的回滚；不能读取 Secret、修改 RBAC、执行 Shell 或访问其他命名空间。
 
 ## 注入故障
@@ -79,17 +81,23 @@ curl -i -X POST http://127.0.0.1:18000/remediation/execute \
   -d '{"proposal_id":"<proposal-id>"}'
 ```
 
-下面两个请求是人工审批与实际写操作的边界，不能放进自动故障注入脚本。操作员确认证据、命名空间、Deployment 和审批有效期后，才手动执行：
+下面两个请求是人工审批与实际写操作的边界，不能放进自动故障注入脚本。操作员确认证据、命名空间、Deployment 和审批有效期后，读取本地令牌并手动执行：
 
 ```bash
+OPSPILOT_KIND_TOKEN=$(<.secrets/opspilot-kind-token)
+
 curl -s -X POST http://127.0.0.1:18000/remediation/proposals/<proposal-id>/approval \
+  -H "Authorization: Bearer $OPSPILOT_KIND_TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{"approved_by":"<operator>","expires_in_minutes":15}'
+  -d '{"expires_in_minutes":15}'
 
 curl -s -X POST http://127.0.0.1:18000/remediation/execute \
+  -H "Authorization: Bearer $OPSPILOT_KIND_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"proposal_id":"<proposal-id>","approval_id":"<approval-id>"}'
 ```
+
+`approved_by` 不再接受客户端输入，而是固定取自该令牌在服务端映射的 `kind-operator` 身份。缺失或错误令牌返回 401，未配置认证返回 503，使用其他操作员令牌执行已有审批返回 403。
 
 修复建议必须引用已存在的事故；不存在的 `incident_id` 会返回 HTTP 404。
 

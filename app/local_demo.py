@@ -10,6 +10,7 @@ from app.adapters.prometheus import MetricQueryResult, MetricSample
 from app.agent.orchestrator import IncidentInvestigator
 from app.main import create_app
 from app.policy.remediation import RemediationExecutor, RemediationPolicy
+from app.security.auth import BearerTokenAuthenticator
 from app.storage.audit import AuditRepository
 
 
@@ -69,6 +70,9 @@ def run_demo() -> str:
             audit_repository=audit,
             investigator=investigator,
             remediation_executor=executor,
+            operator_authenticator=BearerTokenAuthenticator(
+                token="local-demo-token", subject="demo-operator"
+            ),
         )
     )
     alert = client.post(
@@ -104,10 +108,12 @@ def run_demo() -> str:
     ).json()
     approval = client.post(
         f"/remediation/proposals/{proposal['id']}/approval",
-        json={"approved_by": "demo-operator", "expires_in_minutes": 15},
+        headers={"Authorization": "Bearer local-demo-token"},
+        json={"expires_in_minutes": 15},
     ).json()
     execution = client.post(
         "/remediation/execute",
+        headers={"Authorization": "Bearer local-demo-token"},
         json={"proposal_id": proposal["id"], "approval_id": approval["id"]},
     ).json()
     timeline = client.get(f"/incidents/{incident_id}/audit").json()

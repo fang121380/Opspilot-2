@@ -40,7 +40,7 @@ Alertmanager
 
 ### 3. 审批如何防止重放
 
-执行只接收服务端保存的 `proposal_id` 和 `approval_id`。执行器验证动作白名单、命名空间、proposal 匹配和审批过期时间，并通过数据库条件更新只允许一个请求把事故从 `awaiting_approval` 抢占为 `executing`。执行中、验证中和终态事故不能重新创建提案，客户端既不能篡改 Deployment 名称，也不能重放同一次回滚。
+审批和执行必须携带 Bearer 凭据，`approved_by` 来自服务端映射身份而不是请求正文；执行者还必须与审批者一致。执行器验证动作白名单、命名空间、proposal 匹配和审批过期时间，并通过数据库条件更新只允许一个请求把事故从 `awaiting_approval` 抢占为 `executing`。执行中、验证中和终态事故不能重新创建提案，客户端既不能篡改 Deployment 名称，也不能重放同一次回滚。
 
 ### 4. Kubernetes 回滚如何实现
 
@@ -68,7 +68,7 @@ make eval
 
 ## 当前量化结果
 
-- 87 个测试。
+- 99 个测试。
 - 90% 以上代码覆盖率门槛。
 - 4 个离线事故评测样本，其中包含 3 个禁止误回滚的负样本。
 - MCP Server 仅公开 3 个只读诊断工具。
@@ -76,7 +76,7 @@ make eval
 ## 当前限制和下一步
 
 - 进程内 Job Manager 和内存模式适合 MVP；生产环境应替换为 Redis/队列和持久化 Job。
-- `approved_by` 当前是输入字段，生产环境应对接 OIDC/RBAC 证明身份。
+- 当前 Bearer 认证适合单操作员演示；生产环境应替换为 OIDC/JWT 验签和 RBAC。
 - MCP Server 已有工具契约和内存测试，下一步应加入 Streamable HTTP 鉴权网关。
 - Kind 中的 Prometheus、Alertmanager、集群内 API、最小 RBAC 与真实调查已经联调；PostgreSQL 多副本执行互斥和 Alembic 安全迁移已覆盖，生产身份认证与持久化任务队列仍需补齐。
 
