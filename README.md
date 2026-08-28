@@ -56,6 +56,7 @@ make run
 - MCP v2 只读诊断服务器，仅提供 Deployment、Pod 和固定 HTTP 5xx 查询工具。
 - 异步调查 Job API，可轮询 queued/running/succeeded/failed 状态。
 - Dockerfile、Docker Compose、Kind 演练清单、故障注入器和离线评测集。
+- Kind 中的专用 ServiceAccount 和最小 RBAC：没有 Secret、Shell、RBAC 修改或跨命名空间权限。
 - `make demo` 可以无 Docker 演示告警、调查、审批、执行和审计的完整 API 闭环。
 
 ## 当前验证

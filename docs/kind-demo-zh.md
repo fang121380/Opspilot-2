@@ -20,6 +20,8 @@ make run
 
 脚本会创建两节点 Kind 集群、构建演示服务镜像、加载镜像、部署 checkout 和 Prometheus，并等待 Deployment 就绪。
 
+`infra/kind/opspilot-rbac.yaml` 创建了专用 `opspilot-2` ServiceAccount。它只可读取 demo 命名空间中的 Deployment、ReplicaSet、Pod 和 Pod 日志，并且仅能 patch Deployment 用于审批后的回滚；不能读取 Secret、修改 RBAC、执行 Shell 或访问其他命名空间。
+
 ## 注入故障
 
 ```bash
@@ -36,4 +38,3 @@ make run
 ```
 
 当前清单已经包含 Prometheus 的 Kubernetes 服务发现和最小只读 RBAC。Alertmanager 转发到 Opspilot 2 的配置会在 API 端到端集成阶段加入，避免在尚未有可用地址时写死外部 URL。
-

@@ -10,6 +10,7 @@ case "${1:-up}" in
     docker build -t opspilot-2/checkout:dev "$ROOT_DIR/demo"
     kind load docker-image --name "$CLUSTER_NAME" opspilot-2/checkout:dev
     kubectl apply -f "$ROOT_DIR/infra/kind/namespace.yaml"
+    kubectl apply -f "$ROOT_DIR/infra/kind/opspilot-rbac.yaml"
     kubectl apply -f "$ROOT_DIR/infra/kind/checkout-v1.yaml"
     kubectl apply -f "$ROOT_DIR/infra/kind/prometheus.yaml"
     kubectl -n demo rollout status deployment/checkout --timeout=120s
@@ -33,4 +34,3 @@ case "${1:-up}" in
     exit 2
     ;;
 esac
-
