@@ -81,7 +81,8 @@ async def approve_proposal(
     audit_repository: AuditDependency,
     repository: RepositoryDependency,
 ) -> Approval:
-    if repository.get_proposal(proposal_id) is None:
+    proposal = repository.get_proposal(proposal_id)
+    if proposal is None:
         raise HTTPException(status_code=404, detail="remediation proposal not found")
     if not payload.approved_by.strip():
         raise HTTPException(status_code=422, detail="approved_by must not be empty")
@@ -97,6 +98,7 @@ async def approve_proposal(
     repository.add_approval(approval)
     audit_repository.append(
         event_type=AuditEventType.APPROVAL_GRANTED,
+        incident_id=proposal.incident_id,
         payload=approval.model_dump(mode="json"),
     )
     return approval
@@ -107,6 +109,7 @@ async def execute_remediation(
     request: ExecuteRequest,
     executor: ExecutorDependency = None,
     repository: RepositoryDependency = None,
+    audit_repository: AuditDependency = None,
 ) -> ExecutionResult:
     if executor is None:
         raise HTTPException(status_code=503, detail="remediation executor is not configured")
@@ -117,6 +120,17 @@ async def execute_remediation(
     if request.approval_id and approval is None:
         raise HTTPException(status_code=404, detail="remediation approval not found")
     try:
-        return await executor.execute(proposal, approval=approval)
+        result = await executor.execute(proposal, approval=approval)
+        audit_repository.append(
+            event_type=AuditEventType.REMEDIATION_EXECUTED,
+            incident_id=proposal.incident_id,
+            payload=result.model_dump(mode="json"),
+        )
+        return result
     except (PolicyDeniedError, ApprovalRequiredError, ApprovalExpiredError) as error:
+        audit_repository.append(
+            event_type=AuditEventType.REMEDIATION_REJECTED,
+            incident_id=proposal.incident_id,
+            payload={"reason": str(error)},
+        )
         raise HTTPException(status_code=403, detail=str(error)) from error

@@ -1,7 +1,7 @@
 PYTHON ?= .venv/bin/python
 PIP ?= .venv/bin/pip
 
-.PHONY: setup test coverage eval lint format run
+.PHONY: setup test coverage eval demo lint format run
 
 setup:
 	$(PYTHON) -m pip install --upgrade pip
@@ -15,6 +15,9 @@ coverage:
 
 eval:
 	$(PYTHON) scripts/run-evals.py
+
+demo:
+	$(PYTHON) scripts/run-local-demo.py
 
 lint:
 	$(PYTHON) -m ruff check .

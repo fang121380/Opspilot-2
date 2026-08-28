@@ -35,6 +35,17 @@ def test_create_proposal_and_approval_endpoints() -> None:
     assert approval.json()["proposal_id"] == proposal_id
 
 
+def test_approval_rejects_unknown_proposal() -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        f"/remediation/proposals/{uuid4()}/approval",
+        json={"approved_by": "operator", "expires_in_minutes": 10},
+    )
+
+    assert response.status_code == 404
+
+
 def test_execute_endpoint_is_disabled_without_injected_executor() -> None:
     client = TestClient(create_app())
 

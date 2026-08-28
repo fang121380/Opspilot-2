@@ -35,6 +35,7 @@ make test
 make coverage
 make lint
 make eval
+make demo
 make run
 ```
 
@@ -55,6 +56,7 @@ make run
 - MCP v2 只读诊断服务器，仅提供 Deployment、Pod 和固定 HTTP 5xx 查询工具。
 - 异步调查 Job API，可轮询 queued/running/succeeded/failed 状态。
 - Dockerfile、Docker Compose、Kind 演练清单、故障注入器和离线评测集。
+- `make demo` 可以无 Docker 演示告警、调查、审批、执行和审计的完整 API 闭环。
 
 ## 当前验证
 
@@ -76,4 +78,3 @@ Docker Desktop 是本机唯一缺少的依赖。安装并启动后可执行：
 ```
 
 随后验证 Prometheus 告警、真实 Kubernetes 调查和审批回滚闭环。Docker 官方安装包的断点下载文件不会进入 Git 仓库。
-
