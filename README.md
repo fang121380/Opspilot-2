@@ -63,6 +63,7 @@ The API health endpoint is available at `http://127.0.0.1:8000/health` and the O
 - Replaceable OpenAI-compatible text provider; model output is narration only and has no tool or mutation authority.
 - Reproducible Kind manifests and a deterministic `checkout` failure injector are included; execution waits for Docker Desktop.
 - Docker Compose packaging is included for the API, PostgreSQL, and Prometheus; PostgreSQL wiring remains the next persistence milestone.
+- A small offline incident evaluation dataset is available with `make eval`; it checks both safe rollback recommendations and false-positive rejection.
 
 ## Environment status
 

@@ -12,7 +12,7 @@ make run
 
 ## Docker Compose 模式
 
-Compose 会启动 Opspilot 2、PostgreSQL 和 Prometheus：
+Compose 会启动 Opspilot 2、PostgreSQL 和 Prometheus。设置数据库连接后，Incident 和 Audit 会使用 SQLAlchemy 持久化存储：
 
 ```bash
 docker compose up --build
@@ -30,8 +30,7 @@ Kind 演练清单在 `infra/kind/`，脚本说明见 [Kind 故障演练](kind-de
 | 环境变量 | 用途 | 默认值 |
 | --- | --- | --- |
 | `OPSPILOT_ENVIRONMENT` | 运行环境标识 | `development` |
-| `OPSPILOT_DATABASE_URL` | PostgreSQL 异步连接串 | 未设置，使用内存存储 |
+| `OPSPILOT_DATABASE_URL` | SQLAlchemy PostgreSQL 连接串 | 未设置，使用内存存储 |
 | `OPSPILOT_PROMETHEUS_URL` | Prometheus 地址 | 未设置 |
 
 没有设置外部依赖时，API 仍可以接收告警和运行离线测试；调查接口会返回 503，而不是伪造诊断结果。
-

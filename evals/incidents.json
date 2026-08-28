@@ -1,0 +1,43 @@
+[
+  {
+    "name": "deployment-regression",
+    "description": "新版本导致副本不可用、5xx 升高并产生错误日志。",
+    "available_replicas": 2,
+    "desired_replicas": 3,
+    "error_rate": 0.42,
+    "logs": "ERROR migration connection refused",
+    "expected_hypothesis": "Recent deployment regression",
+    "expect_rollback": true
+  },
+  {
+    "name": "healthy-service",
+    "description": "服务健康，不能因为普通信息日志建议回滚。",
+    "available_replicas": 3,
+    "desired_replicas": 3,
+    "error_rate": 0.0,
+    "logs": "INFO request completed",
+    "expected_hypothesis": "Insufficient evidence for a deployment regression",
+    "expect_rollback": false
+  },
+  {
+    "name": "replica-shortage-only",
+    "description": "副本不足，但没有 HTTP 5xx 和错误日志的共同证据。",
+    "available_replicas": 2,
+    "desired_replicas": 3,
+    "error_rate": 0.0,
+    "logs": "WARN readiness probe slow",
+    "expected_hypothesis": "Insufficient evidence for a deployment regression",
+    "expect_rollback": false
+  },
+  {
+    "name": "logs-only-noise",
+    "description": "日志含 error 单词，但部署和指标没有回归。",
+    "available_replicas": 3,
+    "desired_replicas": 3,
+    "error_rate": 0.03,
+    "logs": "ERROR handled validation error; request returned 400",
+    "expected_hypothesis": "Insufficient evidence for a deployment regression",
+    "expect_rollback": false
+  }
+]
+

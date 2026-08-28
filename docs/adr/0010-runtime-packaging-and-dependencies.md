@@ -22,6 +22,5 @@ Positive:
 
 Trade-offs:
 
-- PostgreSQL persistence is the next implementation step; Compose currently provisions the database before its repository is wired in.
+- PostgreSQL persistence is wired through the SQLAlchemy Repository when `OPSPILOT_DATABASE_URL` is configured; the default test factory still uses in-memory storage.
 - The Kind integration still requires Docker Desktop and a working kubeconfig.
-
