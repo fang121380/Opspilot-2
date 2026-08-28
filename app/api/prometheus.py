@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.domain.incidents import Incident
+from app.domain.kubernetes import is_dns_label
 from app.observability.metrics import ALERTS_RECEIVED
 from app.observability.tracing import current_trace_id, traced
 from app.storage.audit import AuditEvent, AuditEventType, AuditRepository
@@ -26,6 +27,15 @@ class AlertmanagerAlert(BaseModel):
     fingerprint: str = ""
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("labels")
+    @classmethod
+    def requires_bounded_kubernetes_scope(cls, labels: dict[str, str]) -> dict[str, str]:
+        for key in ("service", "namespace"):
+            value = labels.get(key, "")
+            if not is_dns_label(value):
+                raise ValueError(f"{key} must be a Kubernetes DNS label")
+        return labels
 
 
 class AlertmanagerWebhook(BaseModel):

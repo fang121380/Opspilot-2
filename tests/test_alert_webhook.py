@@ -88,6 +88,27 @@ def test_rejects_firing_webhook_without_alerts(client: TestClient) -> None:
     assert response.status_code == 422
 
 
+def test_rejects_alert_scope_that_could_broaden_kubernetes_selector(
+    client: TestClient,
+) -> None:
+    payload = alertmanager_payload()
+    payload["alerts"][0]["labels"]["service"] = "checkout,app"
+
+    response = client.post("/webhooks/prometheus", json=payload)
+
+    assert response.status_code == 422
+    assert client.get("/incidents").json() == []
+
+
+def test_rejects_alert_without_required_kubernetes_scope(client: TestClient) -> None:
+    payload = alertmanager_payload()
+    del payload["alerts"][0]["labels"]["namespace"]
+
+    response = client.post("/webhooks/prometheus", json=payload)
+
+    assert response.status_code == 422
+
+
 def test_lists_created_incidents(client: TestClient) -> None:
     created = client.post("/webhooks/prometheus", json=alertmanager_payload())
 

@@ -29,6 +29,7 @@ For one Kubernetes service and one incident class (high HTTP 5xx rate after depl
 ## In scope
 
 - Single-cluster, single-namespace demo environment.
+- Firing alerts must provide `service` and `namespace` values that satisfy the bounded Kubernetes DNS-label contract; malformed scope is rejected before any cluster query.
 - One incident type for the first vertical slice.
 - Read-only diagnostic tools.
 - Allowlisted deployment rollback as the first mutating operation.
@@ -54,4 +55,3 @@ For one Kubernetes service and one incident class (high HTTP 5xx rate after depl
 - Every mutating request is rejected unless it has a valid, unexpired approval.
 - Every tool call and remediation attempt has a correlation ID and audit record.
 - A new engineer can run the demo from the repository documentation.
-

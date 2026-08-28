@@ -15,6 +15,7 @@
 - `AlertmanagerWebhook` 接收 Prometheus Alertmanager 兼容格式。
 - API 在边界处把供应商 JSON 转成内部 `Incident` 模型。
 - 通过告警 fingerprint 对活动告警去重。
+- `service` 和 `namespace` 在入口处按有界 Kubernetes DNS label 校验，避免恶意 label selector 扩大只读查询范围。
 
 这里的核心概念是**幂等性**：监控系统会重复发送告警，接收端不能为同一个活动故障无限创建事故。
 
