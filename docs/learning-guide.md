@@ -44,6 +44,8 @@
 
 这里的核心概念是**纵深防御**：单独的审批不足以防止越权、误绑定和过期重放。
 
+审批 API 在 `app/api/remediation.py`：提案、审批和执行是三个独立操作。默认应用没有执行器，执行接口会返回 503；只有显式注入执行器后，且请求带有匹配审批，才可能触达 Kubernetes 客户端。
+
 ## 6. 理解审计和追踪
 
 阅读 `app/storage/audit.py`、`app/observability/tracing.py` 和 `app/api/prometheus.py`。
