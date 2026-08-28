@@ -14,12 +14,15 @@
 
 - `AlertmanagerWebhook` 接收 Prometheus Alertmanager 兼容格式。
 - API 在边界处把供应商 JSON 转成内部 `Incident` 模型。
+- Webhook 先验证独立 Alertmanager Bearer 凭据，未认证请求不能创建事故。
 - 通过告警 fingerprint 对活动告警去重。
 - `service` 和 `namespace` 在入口处按有界 Kubernetes DNS label 校验，避免恶意 label selector 扩大只读查询范围。
 
 这里的核心概念是**幂等性**：监控系统会重复发送告警，接收端不能为同一个活动故障无限创建事故。
 
 去重只针对活动事故。事故进入 `resolved` 或 `closed` 后会释放 fingerprint；同一告警以后再次发生时必须创建新事故，保留两次独立的时间线。SQL 模型用普通 `alert_fingerprint` 保存历史值，并用可空、唯一的 `active_fingerprint` 保证每个 fingerprint 最多只有一个活动事故；终态记录把后者置空。并发请求同时插入时由数据库唯一约束选择一个胜者，竞争失败的事务回读胜者并按去重成功返回。
+
+Alertmanager 认证和操作员认证复用同一个最小 Bearer 校验器，但使用不同 Principal 和不同 Secret。前者只能通过告警路由，后者只保护审批与执行，避免监控组件继承写权限。设计见 [ADR-0017](adr/0017-authenticate-alertmanager-webhooks.md)。
 
 ## 3. 检查只读适配器
 

@@ -22,6 +22,7 @@ def test_readiness_reports_missing_workflow_dependencies() -> None:
     assert response.json()["detail"] == {
         "status": "not_ready",
         "missing_dependencies": [
+            "alert_authenticator",
             "investigator",
             "job_manager",
             "operator_authenticator",
@@ -41,6 +42,9 @@ def test_readiness_succeeds_when_workflow_dependencies_are_wired() -> None:
             verifier=dependency,
             operator_authenticator=BearerTokenAuthenticator(
                 token="readiness-token", subject="readiness-operator"
+            ),
+            alert_authenticator=BearerTokenAuthenticator(
+                token="readiness-alert-token", subject="readiness-alertmanager"
             ),
         )
     )

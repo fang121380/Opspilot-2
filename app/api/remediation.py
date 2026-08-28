@@ -20,9 +20,9 @@ from app.policy.remediation import (
     RemediationProposal,
 )
 from app.security.auth import (
+    AuthenticatedPrincipal,
+    BearerAuthenticationError,
     BearerTokenAuthenticator,
-    OperatorAuthenticationError,
-    OperatorPrincipal,
 )
 from app.storage.audit import AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
@@ -75,13 +75,13 @@ def incident_repository_from_request(request: Request) -> IncidentRepository:
 def operator_from_request(
     request: Request,
     authorization: Annotated[str | None, Header()] = None,
-) -> OperatorPrincipal:
+) -> AuthenticatedPrincipal:
     authenticator: BearerTokenAuthenticator | None = request.app.state.operator_authenticator
     if authenticator is None:
         raise HTTPException(status_code=503, detail="operator authentication is not configured")
     try:
         return authenticator.authenticate(authorization)
-    except OperatorAuthenticationError as error:
+    except BearerAuthenticationError as error:
         raise HTTPException(
             status_code=401,
             detail=str(error),
@@ -95,7 +95,7 @@ RepositoryDependency = Annotated[RemediationRepository, Depends(repository_from_
 IncidentRepositoryDependency = Annotated[
     IncidentRepository, Depends(incident_repository_from_request)
 ]
-OperatorDependency = Annotated[OperatorPrincipal, Depends(operator_from_request)]
+OperatorDependency = Annotated[AuthenticatedPrincipal, Depends(operator_from_request)]
 
 
 @router.post("/remediation/proposals", response_model=RemediationProposal, status_code=201)

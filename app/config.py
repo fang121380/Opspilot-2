@@ -16,6 +16,7 @@ class Settings:
     )
     operator_token: str | None = os.getenv("OPSPILOT_OPERATOR_TOKEN")
     operator_id: str | None = os.getenv("OPSPILOT_OPERATOR_ID")
+    alertmanager_token: str | None = os.getenv("OPSPILOT_ALERTMANAGER_TOKEN")
 
     def remediation_namespaces(self) -> set[str]:
         """返回去除空值后的显式回滚命名空间集合。"""

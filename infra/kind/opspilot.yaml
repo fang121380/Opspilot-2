@@ -16,6 +16,9 @@ data:
         webhook_configs:
           - url: http://opspilot-2.demo.svc.cluster.local:8000/webhooks/prometheus
             send_resolved: false
+            http_config:
+              authorization:
+                credentials_file: /etc/opspilot-auth/token
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -56,6 +59,11 @@ spec:
                 secretKeyRef:
                   name: opspilot-2-operator-auth
                   key: operator-id
+            - name: OPSPILOT_ALERTMANAGER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: opspilot-2-alertmanager-auth
+                  key: token
           ports:
             - name: http
               containerPort: 8000
@@ -110,10 +118,16 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/alertmanager
+            - name: alertmanager-auth
+              mountPath: /etc/opspilot-auth
+              readOnly: true
       volumes:
         - name: config
           configMap:
             name: alertmanager-config
+        - name: alertmanager-auth
+          secret:
+            secretName: opspilot-2-alertmanager-auth
 ---
 apiVersion: v1
 kind: Service

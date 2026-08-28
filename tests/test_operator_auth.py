@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 from app.domain.incidents import Incident
 from app.main import create_app
 from app.security.auth import (
+    BearerAuthenticationError,
     BearerTokenAuthenticator,
-    OperatorAuthenticationError,
 )
 from app.storage.incidents import IncidentRepository
 
@@ -35,7 +35,7 @@ def test_bearer_authenticator_rejects_incomplete_server_configuration(
 def test_bearer_authenticator_rejects_invalid_credentials(
     authorization: str | None,
 ) -> None:
-    with pytest.raises(OperatorAuthenticationError):
+    with pytest.raises(BearerAuthenticationError):
         authenticator().authenticate(authorization)
 
 
@@ -43,6 +43,14 @@ def test_bearer_authenticator_returns_server_mapped_identity() -> None:
     principal = authenticator().authenticate("Bearer correct-secret")
 
     assert principal.subject == "on-call@example.com"
+
+
+def test_bearer_authenticator_normalizes_secret_file_newline() -> None:
+    configured = BearerTokenAuthenticator(
+        token="secret-from-file\n", subject="alertmanager"
+    )
+
+    assert configured.authenticate("Bearer secret-from-file").subject == "alertmanager"
 
 
 def test_approval_is_fail_closed_without_configured_authentication() -> None:

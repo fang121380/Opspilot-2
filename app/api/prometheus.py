@@ -6,13 +6,18 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.domain.incidents import Incident
 from app.domain.kubernetes import is_dns_label
 from app.observability.metrics import ALERTS_DEDUPLICATED, ALERTS_RECEIVED, INCIDENTS_CREATED
 from app.observability.tracing import current_trace_id, traced
+from app.security.auth import (
+    AuthenticatedPrincipal,
+    BearerAuthenticationError,
+    BearerTokenAuthenticator,
+)
 from app.storage.audit import AuditEvent, AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
 
@@ -63,8 +68,31 @@ def audit_repository_from_request(request: Request) -> AuditRepository:
     return request.app.state.audit_repository
 
 
+def alert_source_from_request(
+    request: Request,
+    authorization: Annotated[str | None, Header()] = None,
+) -> AuthenticatedPrincipal:
+    authenticator: BearerTokenAuthenticator | None = request.app.state.alert_authenticator
+    if authenticator is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Alertmanager authentication is not configured",
+        )
+    try:
+        return authenticator.authenticate(authorization)
+    except BearerAuthenticationError as error:
+        raise HTTPException(
+            status_code=401,
+            detail=str(error),
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from error
+
+
 RepositoryDependency = Annotated[IncidentRepository, Depends(repository_from_request)]
 AuditDependency = Annotated[AuditRepository, Depends(audit_repository_from_request)]
+AlertSourceDependency = Annotated[
+    AuthenticatedPrincipal, Depends(alert_source_from_request)
+]
 
 
 def alert_fingerprint(alert: AlertmanagerAlert) -> str:
@@ -103,6 +131,7 @@ async def receive_prometheus_webhook(
     webhook: AlertmanagerWebhook,
     repository: RepositoryDependency,
     audit_repository: AuditDependency,
+    alert_source: AlertSourceDependency,
 ) -> IncidentReceipt:
     with traced("alertmanager.webhook"):
         ALERTS_RECEIVED.inc()
@@ -124,6 +153,7 @@ async def receive_prometheus_webhook(
             payload={
                 "alert_name": stored_incident.alert_name,
                 "fingerprint": stored_incident.alert_fingerprint,
+                "source": alert_source.subject,
             },
         )
         audit_repository.append(

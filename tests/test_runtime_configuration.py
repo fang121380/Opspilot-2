@@ -4,7 +4,11 @@ from uuid import uuid4
 import pytest
 
 from app.config import Settings
-from app.main import runtime_operator_authenticator, runtime_remediation_executor
+from app.main import (
+    runtime_alert_authenticator,
+    runtime_operator_authenticator,
+    runtime_remediation_executor,
+)
 from app.policy.remediation import Approval, PolicyDeniedError, RemediationProposal
 
 
@@ -38,6 +42,20 @@ def test_operator_authentication_maps_token_to_configured_identity(
 
     assert authenticator is not None
     assert authenticator.authenticate("Bearer configured-token").subject == "on-call"
+
+
+def test_alert_authentication_maps_independent_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.main.settings",
+        SimpleNamespace(alertmanager_token="alertmanager-token"),
+    )
+
+    authenticator = runtime_alert_authenticator()
+
+    assert authenticator is not None
+    assert authenticator.authenticate("Bearer alertmanager-token").subject == "alertmanager"
 
 
 @pytest.mark.asyncio

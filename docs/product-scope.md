@@ -18,7 +18,7 @@ When a service starts returning errors after a deployment, an operator must corr
 
 For one Kubernetes service and one incident class (high HTTP 5xx rate after deployment), OpsPilot must:
 
-1. Receive a Prometheus-compatible alert webhook.
+1. Authenticate and receive a Prometheus-compatible alert webhook.
 2. Create a normalized incident record with a stable ID.
 3. Collect read-only evidence from Kubernetes, Prometheus, and the service logs.
 4. Produce a structured diagnosis with cited evidence and confidence.
@@ -30,6 +30,7 @@ For one Kubernetes service and one incident class (high HTTP 5xx rate after depl
 
 - Single-cluster, single-namespace demo environment.
 - Firing alerts must provide `service` and `namespace` values that satisfy the bounded Kubernetes DNS-label contract; malformed scope is rejected before any cluster query.
+- Alertmanager source identity and operator identity use separate credentials and capabilities.
 - One incident type for the first vertical slice.
 - Read-only diagnostic tools.
 - Allowlisted deployment rollback as the first mutating operation.
@@ -53,5 +54,6 @@ For one Kubernetes service and one incident class (high HTTP 5xx rate after depl
 - A local Kind demo can inject the target failure and complete the incident workflow.
 - Every diagnosis lists the evidence used to produce it.
 - Every mutating request is rejected unless it has a valid, unexpired approval.
+- Unauthenticated alert webhooks are rejected before incident creation.
 - Every tool call and remediation attempt has a correlation ID and audit record.
 - A new engineer can run the demo from the repository documentation.

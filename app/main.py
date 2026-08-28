@@ -39,6 +39,7 @@ def create_app(
     job_manager: object | None = None,
     verifier: object | None = None,
     operator_authenticator: BearerTokenAuthenticator | None = None,
+    alert_authenticator: BearerTokenAuthenticator | None = None,
     database_url: str | None = None,
 ) -> FastAPI:
     relational_store = (
@@ -116,6 +117,11 @@ def create_app(
         if operator_authenticator is not None
         else runtime_operator_authenticator()
     )
+    app.state.alert_authenticator = (
+        alert_authenticator
+        if alert_authenticator is not None
+        else runtime_alert_authenticator()
+    )
 
     @app.get("/health", tags=["system"])
     async def health() -> dict[str, str]:
@@ -128,6 +134,7 @@ def create_app(
         """Return ready only after all incident workflow dependencies are wired."""
 
         dependencies = {
+            "alert_authenticator": app.state.alert_authenticator,
             "investigator": app.state.investigator,
             "job_manager": app.state.job_manager,
             "operator_authenticator": app.state.operator_authenticator,
@@ -174,6 +181,17 @@ def runtime_operator_authenticator() -> BearerTokenAuthenticator | None:
     return BearerTokenAuthenticator(
         token=settings.operator_token,
         subject=settings.operator_id,
+    )
+
+
+def runtime_alert_authenticator() -> BearerTokenAuthenticator | None:
+    """Build fail-closed Alertmanager source authentication."""
+
+    if not settings.alertmanager_token:
+        return None
+    return BearerTokenAuthenticator(
+        token=settings.alertmanager_token,
+        subject="alertmanager",
     )
 
 

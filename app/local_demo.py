@@ -73,10 +73,14 @@ def run_demo() -> str:
             operator_authenticator=BearerTokenAuthenticator(
                 token="local-demo-token", subject="demo-operator"
             ),
+            alert_authenticator=BearerTokenAuthenticator(
+                token="local-alert-token", subject="demo-alertmanager"
+            ),
         )
     )
     alert = client.post(
         "/webhooks/prometheus",
+        headers={"Authorization": "Bearer local-alert-token"},
         json={
             "status": "firing",
             "alerts": [

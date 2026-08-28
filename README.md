@@ -46,7 +46,7 @@ make run
 
 ## 已完成能力
 
-- Prometheus Alertmanager 兼容 Webhook，按活动 alert fingerprint 去重。
+- 独立 Bearer 认证的 Prometheus Alertmanager Webhook，按活动 alert fingerprint 去重。
 - Incident、Audit、Remediation Proposal 和 Approval 的 SQLAlchemy 持久化；未配置数据库时使用内存模式。
 - Alembic 版本化迁移；可无损接管已知旧开发库，未知部分结构拒绝自动修改。
 - 类型化、受边界约束的 Prometheus 查询与 Kubernetes Deployment/Pod/日志只读诊断。
@@ -54,6 +54,7 @@ make run
 - 只有 HTTP 5xx 非零且匹配 Pod 的错误日志同时出现时才建议回滚；Pod Ready 不等于业务健康。
 - 独立的提案、审批和执行 API；执行阶段只接受服务端保存的 proposal/approval ID。
 - 审批和执行 Bearer 认证；`approved_by` 只能来自服务端凭据映射，不能由请求伪造。
+- Alertmanager 与操作员使用隔离 Secret，监控组件不能取得审批或回滚权限。
 - 动作白名单、命名空间范围、审批匹配、审批过期四层防护。
 - 使用当前 Kubernetes AppsV1 API 从前一 ReplicaSet 模板回滚 Deployment。
 - OpenTelemetry 关联 ID、结构化审计时间线和 Prometheus 服务指标。
@@ -69,8 +70,8 @@ make run
 ## 当前验证
 
 ```text
-99 个单元/集成测试通过
-代码覆盖率 91.35%
+103 个单元/集成测试通过
+代码覆盖率 91.47%
 Ruff 静态检查通过
 离线评测 4/4 通过
 kubectl v1.37.0 和 kind v0.33.0 已验证

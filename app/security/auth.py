@@ -4,12 +4,12 @@ from dataclasses import dataclass
 from hmac import compare_digest
 
 
-class OperatorAuthenticationError(PermissionError):
-    """Raised when a privileged request lacks valid operator credentials."""
+class BearerAuthenticationError(PermissionError):
+    """Raised when a request lacks the configured bearer credential."""
 
 
 @dataclass(frozen=True)
-class OperatorPrincipal:
+class AuthenticatedPrincipal:
     subject: str
 
 
@@ -17,16 +17,17 @@ class BearerTokenAuthenticator:
     """Map one deployment-managed bearer secret to a trusted operator identity."""
 
     def __init__(self, *, token: str, subject: str) -> None:
-        if not token:
-            raise ValueError("operator token must not be empty")
+        normalized_token = token.strip()
+        if not normalized_token:
+            raise ValueError("bearer token must not be empty")
         if not subject.strip():
-            raise ValueError("operator subject must not be empty")
-        self._token = token
-        self._principal = OperatorPrincipal(subject=subject.strip())
+            raise ValueError("bearer subject must not be empty")
+        self._token = normalized_token
+        self._principal = AuthenticatedPrincipal(subject=subject.strip())
 
-    def authenticate(self, authorization: str | None) -> OperatorPrincipal:
+    def authenticate(self, authorization: str | None) -> AuthenticatedPrincipal:
         if authorization is None:
-            raise OperatorAuthenticationError("operator bearer token is required")
+            raise BearerAuthenticationError("bearer token is required")
         scheme, separator, credentials = authorization.partition(" ")
         if (
             not separator
@@ -34,5 +35,5 @@ class BearerTokenAuthenticator:
             or not credentials
             or not compare_digest(credentials, self._token)
         ):
-            raise OperatorAuthenticationError("operator bearer token is invalid")
+            raise BearerAuthenticationError("bearer token is invalid")
         return self._principal

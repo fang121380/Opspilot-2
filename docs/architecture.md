@@ -53,6 +53,7 @@ app/
 
 ## Data flow constraints
 
+- Alertmanager and operator actions use separate bearer identities and Secrets.
 - Diagnostic adapters return typed `ToolResult` values, never raw subprocess output.
 - The analysis service receives an immutable evidence set.
 - A remediation proposal is data, not executable code.

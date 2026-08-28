@@ -13,7 +13,7 @@ Deploy version `v2` with a deterministic application error. The service begins r
 
 ## Expected workflow
 
-1. Prometheus sends the alert to `POST /webhooks/prometheus`.
+1. Alertmanager sends the alert with its dedicated Bearer credential to `POST /webhooks/prometheus`.
 2. OpsPilot creates incident `inc-<id>` and records the received timestamp.
 3. The orchestrator queries deployment rollout status, pod conditions, recent events, error-rate metrics, and recent logs.
 4. The analysis output states that `checkout v2` is the leading hypothesis and cites the HTTP 5xx signal and matching application error logs. Pod readiness remains healthy in this application-level failure scenario.

@@ -17,7 +17,7 @@ Opspilot 2 是一个面向 Kubernetes 的安全优先事故响应平台：它接
 
 ```text
 Alertmanager
-  -> Webhook 接收和 fingerprint 去重
+  -> 独立 Bearer 认证、Webhook 接收和 fingerprint 去重
   -> Incident 持久化
   -> 异步 Investigation Job
   -> Deployment / Pod / 日志 / Prometheus 证据
@@ -50,6 +50,10 @@ Alertmanager
 
 每个事故有结构化 Audit 事件和关联 ID。Webhook、诊断、分析、提案、审批、执行各自留下事件；Prometheus 暴露告警、去重、事故创建、调查、修复和验证结果指标。所有 outcome label 都是固定低基数枚举，不使用事故 ID、服务名或错误正文作为指标标签。
 
+### 6. 为什么监控和操作员使用不同令牌
+
+Alertmanager 只需要创建事故，操作员才允许审批和执行。Kind 把两份随机凭据放在不同 Secret 中，Alertmanager Pod 只挂载监控令牌；即使监控组件被攻破，也不能直接取得回滚审批能力。
+
 ## 可演示命令
 
 ```bash
@@ -68,7 +72,7 @@ make eval
 
 ## 当前量化结果
 
-- 99 个测试。
+- 103 个测试。
 - 90% 以上代码覆盖率门槛。
 - 4 个离线事故评测样本，其中包含 3 个禁止误回滚的负样本。
 - MCP Server 仅公开 3 个只读诊断工具。

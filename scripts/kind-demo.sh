@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLUSTER_NAME="opspilot-2"
 SECRETS_DIR="$ROOT_DIR/.secrets"
 OPERATOR_TOKEN_FILE="$SECRETS_DIR/opspilot-kind-token"
+ALERTMANAGER_TOKEN_FILE="$SECRETS_DIR/opspilot-kind-alertmanager-token"
 
 # Docker Desktop 首次安装时可能尚未创建 /usr/local/bin/docker 软链接。
 # 只在 macOS 官方安装位置存在 CLI 时补充当前脚本的 PATH，不影响其他环境。
@@ -27,9 +28,16 @@ case "${1:-up}" in
       umask 077
       openssl rand -hex 32 >"$OPERATOR_TOKEN_FILE"
     fi
+    if [[ ! -s "$ALERTMANAGER_TOKEN_FILE" ]]; then
+      umask 077
+      openssl rand -hex 32 >"$ALERTMANAGER_TOKEN_FILE"
+    fi
     kubectl -n demo create secret generic opspilot-2-operator-auth \
       --from-literal=token="$(<"$OPERATOR_TOKEN_FILE")" \
       --from-literal=operator-id="kind-operator" \
+      --dry-run=client -o yaml | kubectl apply -f -
+    kubectl -n demo create secret generic opspilot-2-alertmanager-auth \
+      --from-literal=token="$(<"$ALERTMANAGER_TOKEN_FILE")" \
       --dry-run=client -o yaml | kubectl apply -f -
     kubectl apply -f "$ROOT_DIR/infra/kind/opspilot-rbac.yaml"
     kubectl apply -f "$ROOT_DIR/infra/kind/checkout-v1.yaml"
@@ -40,6 +48,7 @@ case "${1:-up}" in
     kubectl apply -f "$ROOT_DIR/infra/kind/opspilot.yaml"
     kubectl -n demo rollout restart deployment/prometheus
     kubectl -n demo rollout restart deployment/opspilot-2
+    kubectl -n demo rollout restart deployment/alertmanager
     kubectl -n demo rollout status deployment/checkout --timeout=120s
     kubectl -n demo rollout status deployment/prometheus --timeout=120s
     kubectl -n demo rollout status deployment/opspilot-2 --timeout=120s

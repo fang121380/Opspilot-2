@@ -4,11 +4,22 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.security.auth import BearerTokenAuthenticator
+
+ALERT_HEADERS = {"Authorization": "Bearer alert-test-token"}
 
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(create_app())
+    client = TestClient(
+        create_app(
+            alert_authenticator=BearerTokenAuthenticator(
+                token="alert-test-token", subject="test-alertmanager"
+            )
+        )
+    )
+    client.headers.update(ALERT_HEADERS)
+    return client
 
 
 def alertmanager_payload(*, fingerprint: str = "alert-123") -> dict[str, object]:
@@ -50,6 +61,33 @@ def test_accepts_firing_alert_and_creates_normalized_incident(client: TestClient
     assert body["incident"]["alert_fingerprint"] == "alert-123"
     assert body["incident"]["started_at"] == "2026-08-27T08:00:00Z"
     assert datetime.fromisoformat(body["incident"]["created_at"]).tzinfo == UTC
+    audit = client.get(f"/incidents/{body['incident']['id']}/audit").json()
+    assert audit[0]["payload"]["source"] == "test-alertmanager"
+
+
+def test_rejects_unauthenticated_alert_without_creating_incident(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/webhooks/prometheus",
+        headers={"Authorization": ""},
+        json=alertmanager_payload(),
+    )
+
+    assert response.status_code == 401
+    assert response.headers["www-authenticate"] == "Bearer"
+    assert client.get("/incidents").json() == []
+
+
+def test_alert_webhook_is_disabled_without_source_authentication() -> None:
+    unauthenticated = TestClient(create_app())
+
+    response = unauthenticated.post(
+        "/webhooks/prometheus", json=alertmanager_payload()
+    )
+
+    assert response.status_code == 503
+    assert unauthenticated.get("/incidents").json() == []
 
 
 def test_deduplicates_active_alerts_by_fingerprint(client: TestClient) -> None:

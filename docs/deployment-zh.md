@@ -52,6 +52,7 @@ Kind 演练清单在 `infra/kind/`，脚本说明见 [Kind 故障演练](kind-de
 | `OPSPILOT_PROMETHEUS_URL` | Prometheus 地址 | 未设置 |
 | `OPSPILOT_OPERATOR_ID` | 可信审批操作员身份 | 未设置，审批和执行关闭 |
 | `OPSPILOT_OPERATOR_TOKEN` | 操作员 Bearer Secret | 未设置，审批和执行关闭 |
+| `OPSPILOT_ALERTMANAGER_TOKEN` | 告警 Webhook Bearer Secret | 未设置，告警入口关闭 |
 
 设置 `OPSPILOT_PROMETHEUS_URL` 后，应用启动时先尝试集群内 ServiceAccount 配置，再尝试当前用户 kubeconfig；成功时自动装配 Kubernetes 只读适配器、Prometheus 适配器和调查编排器。关闭应用时会关闭 HTTP 和 Kubernetes 客户端。
 
@@ -67,3 +68,5 @@ OPSPILOT_OPERATOR_TOKEN=<long-random-secret>
 ```
 
 调用方使用 `Authorization: Bearer <token>`。服务端用常量时间比较验证令牌，并把 `OPSPILOT_OPERATOR_ID` 写入不可由客户端覆盖的 `approved_by` 审计字段；两个变量只配置一个时应用拒绝启动。静态令牌适合本项目的单操作员演示边界，生产平台下一步应替换为 OIDC/JWT 验签与细粒度 RBAC，而不再依赖共享秘密。
+
+Alertmanager 必须使用独立的 `OPSPILOT_ALERTMANAGER_TOKEN` 调用 `/webhooks/prometheus`。未配置时入口返回 503，缺失或错误凭据返回 401，且不会创建事故或审计事件。监控令牌只证明告警来源，不能审批或执行回滚；不得与操作员令牌复用。
