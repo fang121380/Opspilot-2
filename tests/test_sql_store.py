@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from app.domain.incidents import Incident
+from app.policy.remediation import Approval, RemediationProposal
 from app.storage.audit import AuditEventType
 from app.storage.sql import SqlAlchemyStore
 
@@ -49,3 +50,28 @@ def test_sql_store_does_not_confuse_distinct_fingerprints(tmp_path: Path) -> Non
     assert duplicate is False
     assert first.id != second.id
     assert len(store.list()) == 2
+
+
+def test_sql_store_persists_proposal_and_approval_after_reopening(tmp_path: Path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'opspilot.db'}"
+    store = SqlAlchemyStore(database_url)
+    incident, _ = store.create_or_get_active(make_incident())
+    proposal = RemediationProposal(
+        incident_id=incident.id,
+        action="rollback_deployment",
+        namespace="demo",
+        deployment="checkout",
+    )
+    approval = Approval(
+        proposal_id=proposal.id,
+        approved_by="operator",
+        approved_at=datetime(2026, 8, 28, tzinfo=UTC),
+        expires_at=datetime(2026, 8, 28, 1, tzinfo=UTC),
+    )
+    store.add_proposal(proposal)
+    store.add_approval(approval)
+
+    reopened = SqlAlchemyStore(database_url)
+
+    assert reopened.get_proposal(proposal.id).deployment == "checkout"
+    assert reopened.get_approval(approval.id).approved_by == "operator"

@@ -12,7 +12,7 @@ make run
 
 ## Docker Compose 模式
 
-Compose 会启动 Opspilot 2、PostgreSQL 和 Prometheus。设置数据库连接后，Incident 和 Audit 会使用 SQLAlchemy 持久化存储：
+Compose 会启动 Opspilot 2、PostgreSQL 和 Prometheus。设置数据库连接后，Incident、Audit、Remediation Proposal 和 Approval 都会使用 SQLAlchemy 持久化存储：
 
 ```bash
 docker compose up --build

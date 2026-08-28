@@ -13,6 +13,7 @@ from sqlalchemy.orm import (
 )
 
 from app.domain.incidents import Incident, IncidentStatus
+from app.policy.remediation import Approval, RemediationProposal
 from app.storage.audit import AuditEvent, AuditEventType
 
 
@@ -47,6 +48,27 @@ class AuditRow(Base):
     trace_id: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     incident: Mapped[IncidentRow | None] = relationship(back_populates="audit_events")
+
+
+class RemediationProposalRow(Base):
+    __tablename__ = "remediation_proposals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.id"), nullable=False)
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    namespace: Mapped[str] = mapped_column(String(255), nullable=False)
+    deployment: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ApprovalRow(Base):
+    __tablename__ = "remediation_approvals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("remediation_proposals.id"), nullable=False)
+    approved_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    approved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class SqlAlchemyStore:
@@ -147,6 +169,60 @@ class SqlAlchemyStore:
     def list_for_incident(self, incident_id: UUID) -> list[AuditEvent]:
         return self.list_audit(incident_id)
 
+    def add_proposal(self, proposal: RemediationProposal) -> RemediationProposal:
+        with self._sessions.begin() as session:
+            session.merge(
+                RemediationProposalRow(
+                    id=str(proposal.id),
+                    incident_id=str(proposal.incident_id),
+                    action=proposal.action,
+                    namespace=proposal.namespace,
+                    deployment=proposal.deployment,
+                    created_at=proposal.created_at,
+                )
+            )
+        return proposal.model_copy(deep=True)
+
+    def get_proposal(self, proposal_id: UUID) -> RemediationProposal | None:
+        with self._sessions() as session:
+            row = session.get(RemediationProposalRow, str(proposal_id))
+            if row is None:
+                return None
+            return RemediationProposal(
+                id=UUID(row.id),
+                incident_id=UUID(row.incident_id),
+                action=row.action,
+                namespace=row.namespace,
+                deployment=row.deployment,
+                created_at=self._utc(row.created_at),
+            )
+
+    def add_approval(self, approval: Approval) -> Approval:
+        with self._sessions.begin() as session:
+            session.merge(
+                ApprovalRow(
+                    id=str(approval.id),
+                    proposal_id=str(approval.proposal_id),
+                    approved_by=approval.approved_by,
+                    approved_at=approval.approved_at,
+                    expires_at=approval.expires_at,
+                )
+            )
+        return approval.model_copy(deep=True)
+
+    def get_approval(self, approval_id: UUID) -> Approval | None:
+        with self._sessions() as session:
+            row = session.get(ApprovalRow, str(approval_id))
+            if row is None:
+                return None
+            return Approval(
+                id=UUID(row.id),
+                proposal_id=UUID(row.proposal_id),
+                approved_by=row.approved_by,
+                approved_at=self._utc(row.approved_at),
+                expires_at=self._utc(row.expires_at),
+            )
+
     @staticmethod
     def _incident_row(incident: Incident) -> IncidentRow:
         return IncidentRow(
@@ -174,13 +250,11 @@ class SqlAlchemyStore:
             namespace=row.namespace,
             severity=row.severity,
             summary=row.summary,
-            started_at=row.started_at.replace(tzinfo=UTC)
-            if row.started_at.tzinfo is None
-            else row.started_at,
-            created_at=row.created_at.replace(tzinfo=UTC)
-            if row.created_at.tzinfo is None
-            else row.created_at,
-            updated_at=row.updated_at.replace(tzinfo=UTC)
-            if row.updated_at.tzinfo is None
-            else row.updated_at,
+            started_at=SqlAlchemyStore._utc(row.started_at),
+            created_at=SqlAlchemyStore._utc(row.created_at),
+            updated_at=SqlAlchemyStore._utc(row.updated_at),
         )
+
+    @staticmethod
+    def _utc(value: datetime) -> datetime:
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value

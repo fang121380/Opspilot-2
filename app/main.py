@@ -74,7 +74,9 @@ def create_app(
     app.state.audit_repository = audit_repository or relational_store or AuditRepository()
     app.state.investigator = investigator
     app.state.remediation_executor = remediation_executor
-    app.state.remediation_repository = remediation_repository or RemediationRepository()
+    app.state.remediation_repository = (
+        remediation_repository or relational_store or RemediationRepository()
+    )
     app.state.job_manager = job_manager
 
     @app.get("/health", tags=["system"])
