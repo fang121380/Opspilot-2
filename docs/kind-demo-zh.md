@@ -28,7 +28,22 @@ make run
 ./scripts/kind-demo.sh inject-failure
 ```
 
-错误版本通过环境变量让 `/checkout` 持续返回 HTTP 500；Prometheus 每 5 秒抓取指标，规则在 15 秒后触发 `HighErrorRate`。
+错误版本通过环境变量让 `/checkout` 持续返回 HTTP 500。脚本会在 Pod 内每秒生成一次、共 20 次请求，以便 Prometheus 在多个抓取周期中观察到错误速率；规则在条件持续 15 秒后触发 `HighErrorRate`。
+
+## 验证告警
+
+在另一个终端中转发 Prometheus 服务，等待约 35 秒后查询告警状态：
+
+```bash
+kubectl -n demo port-forward service/prometheus 19090:9090
+curl -s http://127.0.0.1:19090/api/v1/alerts
+```
+
+结果中应有标签 `alertname=HighErrorRate` 且状态为 `firing`。也可查询错误速率：
+
+```bash
+curl -s 'http://127.0.0.1:19090/api/v1/query?query=sum(rate(http_requests_total%7Bservice%3D%22checkout%22%2Ccode%3D~%225..%22%7D%5B1m%5D))'
+```
 
 ## 恢复和清理
 
@@ -37,4 +52,4 @@ make run
 ./scripts/kind-demo.sh down
 ```
 
-当前清单已经包含 Prometheus 的 Kubernetes 服务发现和最小只读 RBAC。Alertmanager 转发到 Opspilot 2 的配置会在 API 端到端集成阶段加入，避免在尚未有可用地址时写死外部 URL。
+当前清单已经包含 Prometheus 的 Kubernetes 服务发现和仅限 `demo` 命名空间 Pod 的最小只读 RBAC。Alertmanager 转发到 Opspilot 2 的配置会在 API 端到端集成阶段加入，避免在尚未有可用地址时写死外部 URL。
