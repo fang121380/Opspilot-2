@@ -27,7 +27,7 @@ def test_migrations_initialize_fresh_database(tmp_path: Path) -> None:
     engine = sa.create_engine(url)
     inspector = sa.inspect(engine)
     assert action == "initialized"
-    assert current_revision(engine) == "0003_persist_investigation_jobs"
+    assert current_revision(engine) == "0004_deduplicate_active_jobs"
     assert "active_fingerprint" in {
         column["name"] for column in inspector.get_columns("incidents")
     }
@@ -48,7 +48,7 @@ def test_migrations_adopt_current_unversioned_schema(tmp_path: Path) -> None:
     action = run_migrations(url)
 
     assert action == "adopted-current"
-    assert current_revision(engine) == "0003_persist_investigation_jobs"
+    assert current_revision(engine) == "0004_deduplicate_active_jobs"
 
 
 def test_migrations_upgrade_legacy_unversioned_schema_without_losing_history(
@@ -128,3 +128,41 @@ def test_migrations_require_database_url(monkeypatch: pytest.MonkeyPatch) -> Non
 
     with pytest.raises(RuntimeError, match="OPSPILOT_DATABASE_URL is required"):
         run_migrations()
+
+
+def test_active_job_migration_refuses_ambiguous_duplicates(tmp_path: Path) -> None:
+    url = database_url(tmp_path / "duplicate-jobs.db")
+    configuration = _alembic_config(url, None)
+    command.upgrade(configuration, "0003_persist_investigation_jobs")
+    engine = sa.create_engine(url)
+    timestamp = datetime(2026, 8, 28, tzinfo=UTC).isoformat()
+    incident_id = "00000000-0000-0000-0000-000000000031"
+    with engine.begin() as connection:
+        connection.execute(
+            sa.text(
+                "INSERT INTO incidents "
+                "(id, status, alert_name, alert_fingerprint, active_fingerprint, "
+                "severity, started_at, created_at, updated_at) VALUES "
+                "(:id, 'received', 'HighErrorRate', 'duplicate-jobs', "
+                "'duplicate-jobs', 'critical', :timestamp, :timestamp, :timestamp)"
+            ),
+            {"id": incident_id, "timestamp": timestamp},
+        )
+        connection.execute(
+            sa.text(
+                "INSERT INTO investigation_jobs "
+                "(id, incident_id, status, created_at) VALUES "
+                "('00000000-0000-0000-0000-000000000032', :incident_id, "
+                "'queued', :timestamp), "
+                "('00000000-0000-0000-0000-000000000033', :incident_id, "
+                "'running', :timestamp)"
+            ),
+            {"incident_id": incident_id, "timestamp": timestamp},
+        )
+
+    with pytest.raises(RuntimeError, match="duplicate active jobs"):
+        run_migrations(url)
+
+    assert "active_incident_id" not in {
+        column["name"] for column in sa.inspect(engine).get_columns("investigation_jobs")
+    }

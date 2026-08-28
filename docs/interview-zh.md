@@ -72,7 +72,7 @@ make eval
 
 ## 当前量化结果
 
-- 106 个测试。
+- 109 个测试。
 - 90% 以上代码覆盖率门槛。
 - 4 个离线事故评测样本，其中包含 3 个禁止误回滚的负样本。
 - MCP Server 仅公开 3 个只读诊断工具。
@@ -80,6 +80,7 @@ make eval
 ## 当前限制和下一步
 
 - Job 状态和分析结果已在 SQL 模式持久化，但执行协程仍在进程内；生产环境应替换为带租约和重试语义的持久化队列 worker。
+- 数据库唯一活动 Job 约束可阻止多副本为同一事故重复调查；完成或失败后允许显式重新调查。
 - 当前 Bearer 认证适合单操作员演示；生产环境应替换为 OIDC/JWT 验签和 RBAC。
 - MCP Server 已有工具契约和内存测试，下一步应加入 Streamable HTTP 鉴权网关。
 - Kind 中的 Prometheus、Alertmanager、集群内 API、最小 RBAC 与真实调查已经联调；PostgreSQL 多副本执行互斥、Job 快照和 Alembic 安全迁移已覆盖，生产 OIDC/RBAC 与持久化任务执行队列仍需补齐。

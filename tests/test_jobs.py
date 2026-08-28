@@ -70,6 +70,31 @@ async def test_job_snapshot_survives_manager_recreation() -> None:
 
 
 @pytest.mark.asyncio
+async def test_job_manager_deduplicates_only_active_investigations() -> None:
+    incident = Incident(
+        alert_name="HighErrorRate",
+        alert_fingerprint="job-deduplication-test",
+        service="checkout",
+        namespace="demo",
+        started_at=datetime(2026, 8, 28, tzinfo=UTC),
+    )
+    manager = InvestigationJobManager(FakeInvestigator())
+
+    first = manager.enqueue(incident)
+    duplicate = manager.enqueue(incident)
+    assert duplicate.id == first.id
+
+    for _ in range(20):
+        await asyncio.sleep(0)
+        current = manager.get(first.id)
+        if current and current.status == JobStatus.SUCCEEDED:
+            break
+    repeated = manager.enqueue(incident)
+
+    assert repeated.id != first.id
+
+
+@pytest.mark.asyncio
 async def test_job_manager_updates_incident_when_remediation_is_recommended() -> None:
     class RecommendingInvestigator:
         async def investigate(self, incident: Incident) -> AnalysisOutcome:

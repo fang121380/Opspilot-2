@@ -183,7 +183,9 @@ def test_sql_store_persists_investigation_job_snapshots(tmp_path: Path) -> None:
     store = SqlAlchemyStore(database_url)
     incident, _ = store.create_or_get_active(make_incident("persistent-job"))
     job = InvestigationJob(incident_id=incident.id)
-    store.add_job(job)
+    stored, deduplicated = store.create_or_get_active_job(job)
+    assert stored.id == job.id
+    assert deduplicated is False
     job.status = JobStatus.SUCCEEDED
     job.analysis = AnalysisOutcome(
         summary="persisted analysis",
@@ -201,3 +203,42 @@ def test_sql_store_persists_investigation_job_snapshots(tmp_path: Path) -> None:
     assert restored.analysis is not None
     assert restored.analysis.confidence == 0.91
     assert restored.finished_at is not None
+
+
+def test_sql_store_atomically_deduplicates_active_jobs(tmp_path: Path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'concurrent-jobs.db'}"
+    stores = [SqlAlchemyStore(database_url), SqlAlchemyStore(database_url)]
+    incident, _ = stores[0].create_or_get_active(make_incident("job-race"))
+    barrier = Barrier(2)
+    results: list[tuple[InvestigationJob, bool]] = []
+
+    for store in stores:
+        original = store._job_row
+
+        def synchronized_row(
+            job: InvestigationJob, *, _original=original
+        ):
+            barrier.wait(timeout=5)
+            return _original(job)
+
+        store._job_row = synchronized_row  # type: ignore[method-assign]
+
+    threads = [
+        Thread(
+            target=lambda current=store: results.append(
+                current.create_or_get_active_job(
+                    InvestigationJob(incident_id=incident.id)
+                )
+            )
+        )
+        for store in stores
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert len(results) == 2
+    assert len({str(job.id) for job, _ in results}) == 1
+    assert sorted(deduplicated for _, deduplicated in results) == [False, True]

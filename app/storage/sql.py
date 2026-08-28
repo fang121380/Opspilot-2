@@ -81,6 +81,9 @@ class InvestigationJobRow(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.id"), nullable=False)
+    active_incident_id: Mapped[str | None] = mapped_column(
+        String(36), unique=True, nullable=True
+    )
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     analysis_json: Mapped[str | None] = mapped_column(Text)
     error: Mapped[str | None] = mapped_column(String(255))
@@ -305,10 +308,31 @@ class SqlAlchemyStore:
                 expires_at=self._utc(row.expires_at),
             )
 
-    def add_job(self, job: InvestigationJob) -> InvestigationJob:
-        with self._sessions.begin() as session:
-            session.add(self._job_row(job))
-        return job.model_copy(deep=True)
+    def create_or_get_active_job(
+        self, job: InvestigationJob
+    ) -> tuple[InvestigationJob, bool]:
+        try:
+            with self._sessions.begin() as session:
+                existing = session.scalar(
+                    select(InvestigationJobRow).where(
+                        InvestigationJobRow.active_incident_id == str(job.incident_id)
+                    )
+                )
+                if existing is not None:
+                    return self._to_job(existing), True
+                session.add(self._job_row(job))
+                session.flush()
+        except IntegrityError:
+            with self._sessions() as session:
+                existing = session.scalar(
+                    select(InvestigationJobRow).where(
+                        InvestigationJobRow.active_incident_id == str(job.incident_id)
+                    )
+                )
+                if existing is None:
+                    raise
+                return self._to_job(existing), True
+        return job.model_copy(deep=True), False
 
     def update_job(self, job: InvestigationJob) -> InvestigationJob:
         with self._sessions.begin() as session:
@@ -316,31 +340,22 @@ class SqlAlchemyStore:
             if row is None:
                 raise KeyError(str(job.id))
             row.status = job.status.value
+            row.active_incident_id = (
+                None
+                if job.status in {JobStatus.SUCCEEDED, JobStatus.FAILED}
+                else str(job.incident_id)
+            )
             row.analysis_json = job.analysis.model_dump_json() if job.analysis else None
             row.error = job.error
             row.finished_at = job.finished_at
         return job.model_copy(deep=True)
 
     def get_job(self, job_id: UUID) -> InvestigationJob | None:
-        from app.agent.analysis import AnalysisOutcome
-
         with self._sessions() as session:
             row = session.get(InvestigationJobRow, str(job_id))
             if row is None:
                 return None
-            return InvestigationJob(
-                id=UUID(row.id),
-                incident_id=UUID(row.incident_id),
-                status=JobStatus(row.status),
-                analysis=(
-                    AnalysisOutcome.model_validate_json(row.analysis_json)
-                    if row.analysis_json
-                    else None
-                ),
-                error=row.error,
-                created_at=self._utc(row.created_at),
-                finished_at=self._utc(row.finished_at) if row.finished_at else None,
-            )
+            return self._to_job(row)
 
     @staticmethod
     def _incident_row(incident: Incident) -> IncidentRow:
@@ -368,11 +383,36 @@ class SqlAlchemyStore:
         return InvestigationJobRow(
             id=str(job.id),
             incident_id=str(job.incident_id),
+            active_incident_id=(
+                None
+                if job.status in {JobStatus.SUCCEEDED, JobStatus.FAILED}
+                else str(job.incident_id)
+            ),
             status=job.status.value,
             analysis_json=job.analysis.model_dump_json() if job.analysis else None,
             error=job.error,
             created_at=job.created_at,
             finished_at=job.finished_at,
+        )
+
+    @staticmethod
+    def _to_job(row: InvestigationJobRow) -> InvestigationJob:
+        from app.agent.analysis import AnalysisOutcome
+
+        return InvestigationJob(
+            id=UUID(row.id),
+            incident_id=UUID(row.incident_id),
+            status=JobStatus(row.status),
+            analysis=(
+                AnalysisOutcome.model_validate_json(row.analysis_json)
+                if row.analysis_json
+                else None
+            ),
+            error=row.error,
+            created_at=SqlAlchemyStore._utc(row.created_at),
+            finished_at=(
+                SqlAlchemyStore._utc(row.finished_at) if row.finished_at else None
+            ),
         )
 
     @staticmethod

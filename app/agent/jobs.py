@@ -44,9 +44,10 @@ class InvestigationJobManager:
         self._job_repository = job_repository or InMemoryInvestigationJobRepository()
 
     def enqueue(self, incident: Incident) -> InvestigationJob:
-        job = InvestigationJob(incident_id=incident.id)
-        self._job_repository.add_job(job)
-        asyncio.create_task(self._run(job, incident))
+        candidate = InvestigationJob(incident_id=incident.id)
+        job, deduplicated = self._job_repository.create_or_get_active_job(candidate)
+        if not deduplicated:
+            asyncio.create_task(self._run(job, incident))
         return job.model_copy(deep=True)
 
     def get(self, job_id: UUID) -> InvestigationJob | None:

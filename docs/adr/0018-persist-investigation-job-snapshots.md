@@ -15,6 +15,7 @@
 - SQL 模式通过 `investigation_jobs` 表持久化状态、结构化分析 JSON、脱敏错误和完成时间。
 - Manager 在 queued、running 和最终状态写入 Repository；GET API 总是从 Repository 读取。
 - Alembic `0003` 创建 Job 表，现有 `0002` 数据库在线升级时保留全部既有数据。
+- ADR-0019 在此快照模型上增加活动 Job 原子去重。
 
 ## 结果
 

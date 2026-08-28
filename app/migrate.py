@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine.reflection import Inspector
 
 INITIAL_REVISION = "0001_initial_schema"
-HEAD_REVISION = "0003_persist_investigation_jobs"
+HEAD_REVISION = "0004_deduplicate_active_jobs"
 CORE_TABLES = {
     "incidents",
     "audit_events",
@@ -104,7 +104,20 @@ def _adopt_known_schema(configuration: Config, inspector: Inspector) -> str:
             }
             if not expected_job_columns <= job_columns:
                 raise RuntimeError("refusing to adopt an unknown investigation_jobs schema")
-            command.stamp(configuration, HEAD_REVISION)
+            if "active_incident_id" in job_columns:
+                job_unique_columns = {
+                    tuple(constraint.get("column_names") or ())
+                    for constraint in inspector.get_unique_constraints(
+                        "investigation_jobs"
+                    )
+                }
+                if ("active_incident_id",) not in job_unique_columns:
+                    raise RuntimeError(
+                        "refusing to adopt jobs without active incident uniqueness"
+                    )
+                command.stamp(configuration, HEAD_REVISION)
+            else:
+                command.stamp(configuration, "0003_persist_investigation_jobs")
         else:
             command.stamp(configuration, "0002_active_fingerprint")
         return "adopted-current"
