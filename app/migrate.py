@@ -115,6 +115,16 @@ def _adopt_known_schema(configuration: Config, inspector: Inspector) -> str:
                     raise RuntimeError(
                         "refusing to adopt jobs without active incident uniqueness"
                     )
+                proposal_unique_columns = {
+                    tuple(constraint.get("column_names") or ())
+                    for constraint in inspector.get_unique_constraints(
+                        "remediation_proposals"
+                    )
+                }
+                if ("incident_id",) not in proposal_unique_columns:
+                    raise RuntimeError(
+                        "refusing to adopt proposals without incident uniqueness"
+                    )
                 command.stamp(configuration, HEAD_REVISION)
             else:
                 command.stamp(configuration, "0003_persist_investigation_jobs")
