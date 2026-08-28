@@ -8,6 +8,7 @@ from app.agent.jobs import InvestigationJobManager, JobStatus
 from app.domain.incidents import Incident, IncidentStatus
 from app.storage.audit import AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
+from app.storage.jobs import InMemoryInvestigationJobRepository
 
 
 class FakeInvestigator:
@@ -39,6 +40,33 @@ async def test_job_manager_runs_investigation_and_exposes_snapshot() -> None:
     assert current is not None
     assert current.status == JobStatus.SUCCEEDED
     assert current.analysis.confidence == 0.9
+
+
+@pytest.mark.asyncio
+async def test_job_snapshot_survives_manager_recreation() -> None:
+    incident = Incident(
+        alert_name="HighErrorRate",
+        alert_fingerprint="job-restart-test",
+        service="checkout",
+        namespace="demo",
+        started_at=datetime(2026, 8, 28, tzinfo=UTC),
+    )
+    jobs = InMemoryInvestigationJobRepository()
+    first_manager = InvestigationJobManager(FakeInvestigator(), job_repository=jobs)
+    queued = first_manager.enqueue(incident)
+    for _ in range(20):
+        await asyncio.sleep(0)
+        current = first_manager.get(queued.id)
+        if current and current.status == JobStatus.SUCCEEDED:
+            break
+
+    recreated = InvestigationJobManager(FakeInvestigator(), job_repository=jobs)
+    restored = recreated.get(queued.id)
+
+    assert restored is not None
+    assert restored.status == JobStatus.SUCCEEDED
+    assert restored.analysis is not None
+    assert restored.analysis.confidence == 0.9
 
 
 @pytest.mark.asyncio

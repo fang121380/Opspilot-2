@@ -1,4 +1,6 @@
 from datetime import UTC, datetime
+from pathlib import Path
+from time import sleep
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -63,3 +65,32 @@ def test_job_api_rejects_unknown_job() -> None:
     response = client.get(f"/investigation/jobs/{uuid4()}")
 
     assert response.status_code == 404
+
+
+def test_job_api_reopens_persisted_completed_job(tmp_path: Path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'job-api.db'}"
+    application = create_app(database_url=database_url, investigator=FakeInvestigator())
+    incident = Incident(
+        alert_name="HighErrorRate",
+        alert_fingerprint="persistent-job-api-test",
+        service="checkout",
+        namespace="demo",
+        started_at=datetime(2026, 8, 28, tzinfo=UTC),
+    )
+    application.state.incident_repository.create_or_get_active(incident)
+    with TestClient(application) as client:
+        queued = client.post(f"/incidents/{incident.id}/investigate/jobs")
+        job_id = queued.json()["id"]
+        for _ in range(30):
+            completed = client.get(f"/investigation/jobs/{job_id}")
+            if completed.json()["status"] == "succeeded":
+                break
+            sleep(0.01)
+
+    reopened_app = create_app(database_url=database_url, investigator=FakeInvestigator())
+    with TestClient(reopened_app) as reopened:
+        restored = reopened.get(f"/investigation/jobs/{job_id}")
+
+    assert restored.status_code == 200
+    assert restored.json()["status"] == "succeeded"
+    assert restored.json()["analysis"]["confidence"] == 0.9

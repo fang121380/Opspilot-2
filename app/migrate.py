@@ -9,13 +9,14 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine.reflection import Inspector
 
 INITIAL_REVISION = "0001_initial_schema"
-HEAD_REVISION = "0002_active_fingerprint"
-MANAGED_TABLES = {
+HEAD_REVISION = "0003_persist_investigation_jobs"
+CORE_TABLES = {
     "incidents",
     "audit_events",
     "remediation_proposals",
     "remediation_approvals",
 }
+MANAGED_TABLES = CORE_TABLES | {"investigation_jobs"}
 INITIAL_INCIDENT_COLUMNS = {
     "id",
     "status",
@@ -53,8 +54,8 @@ def run_migrations(
             managed = tables & MANAGED_TABLES
             if not managed:
                 action = "initialized"
-            elif managed != MANAGED_TABLES:
-                missing = sorted(MANAGED_TABLES - managed)
+            elif not CORE_TABLES <= managed:
+                missing = sorted(CORE_TABLES - managed)
                 raise RuntimeError(
                     f"refusing to adopt partial Opspilot schema; missing tables: {missing}"
                 )
@@ -86,7 +87,26 @@ def _adopt_known_schema(configuration: Config, inspector: Inspector) -> str:
             or ("alert_fingerprint",) not in indexes
         ):
             raise RuntimeError("refusing to adopt an unknown active_fingerprint schema")
-        command.stamp(configuration, HEAD_REVISION)
+        tables = set(inspector.get_table_names())
+        if "investigation_jobs" in tables:
+            job_columns = {
+                column["name"]
+                for column in inspector.get_columns("investigation_jobs")
+            }
+            expected_job_columns = {
+                "id",
+                "incident_id",
+                "status",
+                "analysis_json",
+                "error",
+                "created_at",
+                "finished_at",
+            }
+            if not expected_job_columns <= job_columns:
+                raise RuntimeError("refusing to adopt an unknown investigation_jobs schema")
+            command.stamp(configuration, HEAD_REVISION)
+        else:
+            command.stamp(configuration, "0002_active_fingerprint")
         return "adopted-current"
 
     if columns >= INITIAL_INCIDENT_COLUMNS and "active_fingerprint" not in columns:

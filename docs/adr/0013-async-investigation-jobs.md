@@ -15,7 +15,7 @@ Expose an explicit job API:
 - `POST /incidents/{incident_id}/investigate/jobs` enqueues an investigation and returns a job ID.
 - `GET /investigation/jobs/{job_id}` returns queued, running, succeeded, or failed state.
 
-The MVP uses an in-process task manager so behavior is testable without Redis. A production deployment can replace this manager with a durable queue without changing the API contract.
+The MVP uses an in-process task manager so behavior is testable without Redis. Job snapshots are persisted through a repository as described in ADR-0018. A production deployment can replace execution with a durable queue without changing the API contract.
 
 ## Consequences
 
@@ -27,6 +27,5 @@ Positive:
 
 Trade-offs:
 
-- The in-process manager loses jobs when the API process restarts.
-- Deduplication and cancellation policies are deferred to the durable queue milestone.
-
+- In-flight coroutines are not resumed when the API process restarts, although their last persisted snapshot remains queryable.
+- Leases, deduplication, cancellation, and retry policies are deferred to the durable queue milestone.

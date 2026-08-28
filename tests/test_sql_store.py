@@ -2,7 +2,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from threading import Barrier, Thread
 
+from app.agent.analysis import AnalysisOutcome
 from app.domain.incidents import Incident, IncidentStatus
+from app.domain.jobs import InvestigationJob, JobStatus
 from app.policy.remediation import Approval, RemediationProposal
 from app.storage.audit import AuditEventType
 from app.storage.sql import SqlAlchemyStore
@@ -174,3 +176,28 @@ def test_sql_store_persists_proposal_and_approval_after_reopening(tmp_path: Path
 
     assert reopened.get_proposal(proposal.id).deployment == "checkout"
     assert reopened.get_approval(approval.id).approved_by == "operator"
+
+
+def test_sql_store_persists_investigation_job_snapshots(tmp_path: Path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'jobs.db'}"
+    store = SqlAlchemyStore(database_url)
+    incident, _ = store.create_or_get_active(make_incident("persistent-job"))
+    job = InvestigationJob(incident_id=incident.id)
+    store.add_job(job)
+    job.status = JobStatus.SUCCEEDED
+    job.analysis = AnalysisOutcome(
+        summary="persisted analysis",
+        impact="none",
+        confidence=0.91,
+    )
+    job.finished_at = datetime.now(UTC)
+    store.update_job(job)
+
+    reopened = SqlAlchemyStore(database_url)
+    restored = reopened.get_job(job.id)
+
+    assert restored is not None
+    assert restored.status == JobStatus.SUCCEEDED
+    assert restored.analysis is not None
+    assert restored.analysis.confidence == 0.91
+    assert restored.finished_at is not None

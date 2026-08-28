@@ -27,7 +27,7 @@ def test_migrations_initialize_fresh_database(tmp_path: Path) -> None:
     engine = sa.create_engine(url)
     inspector = sa.inspect(engine)
     assert action == "initialized"
-    assert current_revision(engine) == "0002_active_fingerprint"
+    assert current_revision(engine) == "0003_persist_investigation_jobs"
     assert "active_fingerprint" in {
         column["name"] for column in inspector.get_columns("incidents")
     }
@@ -36,6 +36,7 @@ def test_migrations_initialize_fresh_database(tmp_path: Path) -> None:
         for item in inspector.get_unique_constraints("incidents")
     }
     assert unique_columns == {("active_fingerprint",)}
+    assert "investigation_jobs" in inspector.get_table_names()
     assert run_migrations(url) == "upgraded"
 
 
@@ -47,7 +48,7 @@ def test_migrations_adopt_current_unversioned_schema(tmp_path: Path) -> None:
     action = run_migrations(url)
 
     assert action == "adopted-current"
-    assert current_revision(engine) == "0002_active_fingerprint"
+    assert current_revision(engine) == "0003_persist_investigation_jobs"
 
 
 def test_migrations_upgrade_legacy_unversioned_schema_without_losing_history(

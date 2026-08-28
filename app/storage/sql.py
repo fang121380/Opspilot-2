@@ -14,6 +14,7 @@ from sqlalchemy.orm import (
 )
 
 from app.domain.incidents import Incident, IncidentStatus
+from app.domain.jobs import InvestigationJob, JobStatus
 from app.policy.remediation import Approval, RemediationProposal
 from app.storage.audit import AuditEvent, AuditEventType
 
@@ -73,6 +74,18 @@ class ApprovalRow(Base):
     approved_by: Mapped[str] = mapped_column(String(255), nullable=False)
     approved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class InvestigationJobRow(Base):
+    __tablename__ = "investigation_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    analysis_json: Mapped[str | None] = mapped_column(Text)
+    error: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class SqlAlchemyStore:
@@ -292,6 +305,43 @@ class SqlAlchemyStore:
                 expires_at=self._utc(row.expires_at),
             )
 
+    def add_job(self, job: InvestigationJob) -> InvestigationJob:
+        with self._sessions.begin() as session:
+            session.add(self._job_row(job))
+        return job.model_copy(deep=True)
+
+    def update_job(self, job: InvestigationJob) -> InvestigationJob:
+        with self._sessions.begin() as session:
+            row = session.get(InvestigationJobRow, str(job.id))
+            if row is None:
+                raise KeyError(str(job.id))
+            row.status = job.status.value
+            row.analysis_json = job.analysis.model_dump_json() if job.analysis else None
+            row.error = job.error
+            row.finished_at = job.finished_at
+        return job.model_copy(deep=True)
+
+    def get_job(self, job_id: UUID) -> InvestigationJob | None:
+        from app.agent.analysis import AnalysisOutcome
+
+        with self._sessions() as session:
+            row = session.get(InvestigationJobRow, str(job_id))
+            if row is None:
+                return None
+            return InvestigationJob(
+                id=UUID(row.id),
+                incident_id=UUID(row.incident_id),
+                status=JobStatus(row.status),
+                analysis=(
+                    AnalysisOutcome.model_validate_json(row.analysis_json)
+                    if row.analysis_json
+                    else None
+                ),
+                error=row.error,
+                created_at=self._utc(row.created_at),
+                finished_at=self._utc(row.finished_at) if row.finished_at else None,
+            )
+
     @staticmethod
     def _incident_row(incident: Incident) -> IncidentRow:
         return IncidentRow(
@@ -311,6 +361,18 @@ class SqlAlchemyStore:
             started_at=incident.started_at,
             created_at=incident.created_at,
             updated_at=incident.updated_at,
+        )
+
+    @staticmethod
+    def _job_row(job: InvestigationJob) -> InvestigationJobRow:
+        return InvestigationJobRow(
+            id=str(job.id),
+            incident_id=str(job.incident_id),
+            status=job.status.value,
+            analysis_json=job.analysis.model_dump_json() if job.analysis else None,
+            error=job.error,
+            created_at=job.created_at,
+            finished_at=job.finished_at,
         )
 
     @staticmethod

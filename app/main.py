@@ -23,6 +23,10 @@ from app.policy.remediation import RemediationExecutor, RemediationPolicy
 from app.security.auth import BearerTokenAuthenticator
 from app.storage.audit import AuditRepository
 from app.storage.incidents import IncidentRepository
+from app.storage.jobs import (
+    InMemoryInvestigationJobRepository,
+    InvestigationJobRepository,
+)
 from app.storage.remediation import RemediationRepository
 from app.storage.sql import SqlAlchemyStore
 
@@ -37,6 +41,7 @@ def create_app(
     remediation_executor: object | None = None,
     remediation_repository: RemediationRepository | None = None,
     job_manager: object | None = None,
+    job_repository: InvestigationJobRepository | None = None,
     verifier: object | None = None,
     operator_authenticator: BearerTokenAuthenticator | None = None,
     alert_authenticator: BearerTokenAuthenticator | None = None,
@@ -71,6 +76,7 @@ def create_app(
                         runtime_app.state.investigator,
                         runtime_app.state.incident_repository,
                         runtime_app.state.audit_repository,
+                        runtime_app.state.job_repository,
                     )
                 if runtime_app.state.verifier is None:
                     runtime_app.state.verifier = IncidentVerifier(prometheus)
@@ -102,11 +108,15 @@ def create_app(
     app.state.remediation_repository = (
         remediation_repository or relational_store or RemediationRepository()
     )
+    app.state.job_repository = (
+        job_repository or relational_store or InMemoryInvestigationJobRepository()
+    )
     app.state.job_manager = job_manager or (
         InvestigationJobManager(
             investigator,
             app.state.incident_repository,
             app.state.audit_repository,
+            app.state.job_repository,
         )
         if investigator is not None
         else None

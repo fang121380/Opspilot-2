@@ -89,7 +89,9 @@ Kubernetes 或 Prometheus 调查失败时，同步接口返回经过清理的 HT
 
 阅读 `app/agent/jobs.py`、`app/api/jobs.py` 和 [ADR-0013](adr/0013-async-investigation-jobs.md)。
 
-长调查通过 `POST /incidents/{incident_id}/investigate/jobs` 返回 Job ID，再用 `GET /investigation/jobs/{job_id}` 查询状态。应用成功装配 Kubernetes 和 Prometheus 调查依赖时会自动创建任务管理器；异步调查同样推进 `investigating` 和 `awaiting_approval` 事故状态。失败任务只暴露异常类型，并写入带 Job ID 的 `diagnostic.failed` 审计事件，不泄露上游错误正文。当前任务本身仍保存在进程内，重启会丢失；后续生产部署可以替换为 Redis 或消息队列而不改变 HTTP 契约。
+长调查通过 `POST /incidents/{incident_id}/investigate/jobs` 返回 Job ID，再用 `GET /investigation/jobs/{job_id}` 查询状态。应用成功装配 Kubernetes 和 Prometheus 调查依赖时会自动创建任务管理器；异步调查同样推进 `investigating` 和 `awaiting_approval` 事故状态。失败任务只暴露异常类型，并写入带 Job ID 的 `diagnostic.failed` 审计事件，不泄露上游错误正文。
+
+任务执行仍由当前进程的 `asyncio` Task 完成，但 Job 的每次可见快照通过 Repository 保存；SQL 模式会持久化 queued/running/succeeded/failed、脱敏错误和结构化分析结果，API 重启后仍可查询已完成任务。进程崩溃时正在运行的协程不会自动恢复，生产环境仍需 Redis/消息队列、租约和 worker 重试语义；持久化元数据不能被夸大成持久化执行。设计见 [ADR-0018](adr/0018-persist-investigation-job-snapshots.md)。
 
 ## 10. 理解部署边界
 
