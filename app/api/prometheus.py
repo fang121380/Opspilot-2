@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.domain.incidents import Incident
 from app.domain.kubernetes import is_dns_label
-from app.observability.metrics import ALERTS_RECEIVED
+from app.observability.metrics import ALERTS_DEDUPLICATED, ALERTS_RECEIVED, INCIDENTS_CREATED
 from app.observability.tracing import current_trace_id, traced
 from app.storage.audit import AuditEvent, AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
@@ -116,6 +116,7 @@ async def receive_prometheus_webhook(
         incident = normalize_incident(firing_alerts[0])
         trace_id = current_trace_id()
         stored_incident, deduplicated = repository.create_or_get_active(incident)
+        (ALERTS_DEDUPLICATED if deduplicated else INCIDENTS_CREATED).inc()
         audit_repository.append(
             event_type=AuditEventType.ALERT_RECEIVED,
             incident_id=stored_incident.id,

@@ -51,3 +51,7 @@ def test_metrics_endpoint_is_mounted() -> None:
 
     assert response.status_code == 200
     assert "opspilot_alerts_received_total" in response.text
+    assert "opspilot_incidents_created_total" in response.text
+    assert "opspilot_investigation_outcomes_total" in response.text
+    assert "opspilot_remediation_outcomes_total" in response.text
+    assert "opspilot_verification_outcomes_total" in response.text

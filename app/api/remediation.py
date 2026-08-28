@@ -9,6 +9,7 @@ from pydantic import BaseModel, field_validator
 
 from app.domain.incidents import IncidentStatus
 from app.domain.kubernetes import is_dns_label
+from app.observability.metrics import REMEDIATION_OUTCOMES
 from app.policy.remediation import (
     Approval,
     ApprovalExpiredError,
@@ -166,6 +167,7 @@ async def execute_remediation(
     if incident is None:
         raise HTTPException(status_code=404, detail="incident not found")
     if incident.status != IncidentStatus.AWAITING_APPROVAL:
+        REMEDIATION_OUTCOMES.labels(outcome="blocked").inc()
         raise HTTPException(
             status_code=409,
             detail=f"incident cannot execute remediation from status {incident.status.value}",
@@ -173,6 +175,7 @@ async def execute_remediation(
     try:
         incident_repository.update_status(str(proposal.incident_id), IncidentStatus.EXECUTING)
         result = await executor.execute(proposal, approval=approval)
+        REMEDIATION_OUTCOMES.labels(outcome="executed").inc()
         incident_repository.update_status(str(proposal.incident_id), IncidentStatus.VERIFYING)
         audit_repository.append(
             event_type=AuditEventType.REMEDIATION_EXECUTED,
@@ -181,6 +184,7 @@ async def execute_remediation(
         )
         return result
     except (PolicyDeniedError, ApprovalRequiredError, ApprovalExpiredError) as error:
+        REMEDIATION_OUTCOMES.labels(outcome="rejected").inc()
         incident_repository.update_status(
             str(proposal.incident_id), IncidentStatus.AWAITING_APPROVAL
         )
@@ -191,6 +195,7 @@ async def execute_remediation(
         )
         raise HTTPException(status_code=403, detail=str(error)) from error
     except Exception as error:  # noqa: BLE001 - 写操作结果未知时必须保守停留
+        REMEDIATION_OUTCOMES.labels(outcome="failed").inc()
         audit_repository.append(
             event_type=AuditEventType.REMEDIATION_FAILED,
             incident_id=proposal.incident_id,

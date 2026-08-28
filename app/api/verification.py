@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.agent.verification import VerificationOutcome
 from app.domain.incidents import Incident, IncidentStatus
+from app.observability.metrics import VERIFICATION_OUTCOMES
 from app.storage.audit import AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
 
@@ -54,6 +55,7 @@ async def verify_incident(
     try:
         outcome = await verifier.verify(incident)
     except Exception as error:  # noqa: BLE001 - 外部指标依赖的统一 HTTP 边界
+        VERIFICATION_OUTCOMES.labels(outcome="failed").inc()
         audit_repository.append(
             event_type=AuditEventType.VERIFICATION_FAILED,
             incident_id=incident.id,
@@ -65,6 +67,9 @@ async def verify_incident(
         ) from error
     if outcome.resolved:
         repository.update_status(str(incident.id), IncidentStatus.RESOLVED)
+    VERIFICATION_OUTCOMES.labels(
+        outcome="resolved" if outcome.resolved else "unhealthy"
+    ).inc()
     audit_repository.append(
         event_type=AuditEventType.VERIFICATION_COMPLETED,
         incident_id=incident.id,

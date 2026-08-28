@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.agent.analysis import AnalysisOutcome
 from app.domain.incidents import Incident, IncidentStatus
+from app.observability.metrics import INVESTIGATION_OUTCOMES
 from app.storage.audit import AuditEventType
 
 
@@ -72,11 +73,15 @@ class InvestigationJobManager:
         try:
             job.analysis = await self._investigator.investigate(incident)
             job.status = JobStatus.SUCCEEDED
+            INVESTIGATION_OUTCOMES.labels(
+                outcome="recommended" if job.analysis.recommended_actions else "no_action"
+            ).inc()
             if job.analysis.recommended_actions:
                 self._update_incident(incident.id, IncidentStatus.AWAITING_APPROVAL)
         except Exception as error:  # noqa: BLE001 - job boundary records failures
             job.status = JobStatus.FAILED
             job.error = type(error).__name__
+            INVESTIGATION_OUTCOMES.labels(outcome="failed").inc()
             if self._audit_repository is not None:
                 self._audit_repository.append(
                     event_type=AuditEventType.DIAGNOSTIC_FAILED,

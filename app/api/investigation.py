@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.agent.analysis import AnalysisOutcome
 from app.domain.incidents import Incident, IncidentStatus
-from app.observability.metrics import INVESTIGATIONS_STARTED
+from app.observability.metrics import INVESTIGATION_OUTCOMES, INVESTIGATIONS_STARTED
 from app.storage.audit import AuditEventType, AuditRepository
 from app.storage.incidents import IncidentRepository
 
@@ -64,6 +64,7 @@ async def investigate_incident(
     try:
         analysis = await investigator.investigate(incident)
     except Exception as error:  # noqa: BLE001 - 外部调查依赖的统一 HTTP 边界
+        INVESTIGATION_OUTCOMES.labels(outcome="failed").inc()
         audit_repository.append(
             event_type=AuditEventType.DIAGNOSTIC_FAILED,
             incident_id=incident.id,
@@ -75,4 +76,7 @@ async def investigate_incident(
         ) from error
     if analysis.recommended_actions:
         incident = repository.update_status(str(incident_id), IncidentStatus.AWAITING_APPROVAL)
+    INVESTIGATION_OUTCOMES.labels(
+        outcome="recommended" if analysis.recommended_actions else "no_action"
+    ).inc()
     return InvestigationResponse(incident=incident, analysis=analysis)
