@@ -52,6 +52,40 @@ kubectl -n demo port-forward service/opspilot-2 18000:8000
 curl -s http://127.0.0.1:18000/incidents
 ```
 
+## 调查与人工审批门
+
+使用事故 ID 调用真实 Kubernetes 与 Prometheus 调查。只有返回
+`recommended_actions` 后才创建修复建议：
+
+```bash
+curl -s -X POST http://127.0.0.1:18000/incidents/<incident-id>/investigate
+curl -s -X POST http://127.0.0.1:18000/remediation/proposals \
+  -H 'Content-Type: application/json' \
+  -d '{"incident_id":"<incident-id>","action":"rollback_deployment","namespace":"demo","deployment":"checkout"}'
+```
+
+没有匹配审批时执行接口固定返回 HTTP 403，Deployment 不会被修改：
+
+```bash
+curl -i -X POST http://127.0.0.1:18000/remediation/execute \
+  -H 'Content-Type: application/json' \
+  -d '{"proposal_id":"<proposal-id>"}'
+```
+
+下面两个请求是人工审批与实际写操作的边界，不能放进自动故障注入脚本。操作员确认证据、命名空间、Deployment 和审批有效期后，才手动执行：
+
+```bash
+curl -s -X POST http://127.0.0.1:18000/remediation/proposals/<proposal-id>/approval \
+  -H 'Content-Type: application/json' \
+  -d '{"approved_by":"<operator>","expires_in_minutes":15}'
+
+curl -s -X POST http://127.0.0.1:18000/remediation/execute \
+  -H 'Content-Type: application/json' \
+  -d '{"proposal_id":"<proposal-id>","approval_id":"<approval-id>"}'
+```
+
+修复建议必须引用已存在的事故；不存在的 `incident_id` 会返回 HTTP 404。
+
 ## 恢复和清理
 
 ```bash

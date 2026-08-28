@@ -17,6 +17,7 @@ from app.policy.remediation import (
     RemediationProposal,
 )
 from app.storage.audit import AuditEventType, AuditRepository
+from app.storage.incidents import IncidentRepository
 from app.storage.remediation import RemediationRepository
 
 router = APIRouter(tags=["remediation"])
@@ -51,9 +52,16 @@ def repository_from_request(request: Request) -> RemediationRepository:
     return request.app.state.remediation_repository
 
 
+def incident_repository_from_request(request: Request) -> IncidentRepository:
+    return request.app.state.incident_repository
+
+
 AuditDependency = Annotated[AuditRepository, Depends(audit_from_request)]
 ExecutorDependency = Annotated[RemediationExecutor | None, Depends(executor_from_request)]
 RepositoryDependency = Annotated[RemediationRepository, Depends(repository_from_request)]
+IncidentRepositoryDependency = Annotated[
+    IncidentRepository, Depends(incident_repository_from_request)
+]
 
 
 @router.post("/remediation/proposals", response_model=RemediationProposal, status_code=201)
@@ -61,7 +69,10 @@ async def create_proposal(
     payload: CreateProposalRequest,
     audit_repository: AuditDependency,
     repository: RepositoryDependency,
+    incident_repository: IncidentRepositoryDependency,
 ) -> RemediationProposal:
+    if incident_repository.get(str(payload.incident_id)) is None:
+        raise HTTPException(status_code=404, detail="incident not found")
     proposal = RemediationProposal(**payload.model_dump())
     repository.add_proposal(proposal)
     audit_repository.append(

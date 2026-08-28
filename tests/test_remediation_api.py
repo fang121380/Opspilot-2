@@ -1,9 +1,12 @@
-from uuid import uuid4
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 
+from app.domain.incidents import Incident
 from app.main import create_app
 from app.policy.remediation import RemediationExecutor, RemediationPolicy
+from app.storage.incidents import IncidentRepository
 
 
 class FakeRollbackClient:
@@ -11,9 +14,28 @@ class FakeRollbackClient:
         return "ok"
 
 
+def app_with_incident(
+    incident_id: UUID, *, remediation_executor: RemediationExecutor | None = None
+):
+    repository = IncidentRepository()
+    repository.create_or_get_active(
+        Incident(
+            id=incident_id,
+            alert_name="HighErrorRate",
+            alert_fingerprint=f"test:{incident_id}",
+            service="checkout",
+            namespace="demo",
+            started_at=datetime.now(UTC),
+        )
+    )
+    return create_app(
+        incident_repository=repository, remediation_executor=remediation_executor
+    )
+
+
 def test_create_proposal_and_approval_endpoints() -> None:
-    client = TestClient(create_app())
     incident_id = uuid4()
+    client = TestClient(app_with_incident(incident_id))
 
     proposal = client.post(
         "/remediation/proposals",
@@ -48,6 +70,23 @@ def test_approval_rejects_unknown_proposal() -> None:
     assert response.status_code == 404
 
 
+def test_create_proposal_rejects_unknown_incident() -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/remediation/proposals",
+        json={
+            "incident_id": str(uuid4()),
+            "action": "rollback_deployment",
+            "namespace": "demo",
+            "deployment": "checkout",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "incident not found"
+
+
 def test_execute_endpoint_is_disabled_without_injected_executor() -> None:
     client = TestClient(create_app())
 
@@ -60,8 +99,8 @@ def test_execute_endpoint_runs_only_with_explicit_executor_and_approval() -> Non
     executor = RemediationExecutor(
         policy=RemediationPolicy(allowed_namespaces={"demo"}), rollback_client=FakeRollbackClient()
     )
-    client = TestClient(create_app(remediation_executor=executor))
     incident_id = uuid4()
+    client = TestClient(app_with_incident(incident_id, remediation_executor=executor))
     proposal = client.post(
         "/remediation/proposals",
         json={
