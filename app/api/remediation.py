@@ -5,9 +5,10 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.domain.incidents import IncidentStatus
+from app.domain.kubernetes import is_dns_label
 from app.policy.remediation import (
     Approval,
     ApprovalExpiredError,
@@ -29,6 +30,13 @@ class CreateProposalRequest(BaseModel):
     action: str
     namespace: str
     deployment: str
+
+    @field_validator("namespace", "deployment")
+    @classmethod
+    def requires_bounded_kubernetes_name(cls, value: str) -> str:
+        if not is_dns_label(value):
+            raise ValueError("must be a Kubernetes DNS label")
+        return value
 
 
 class ApprovalRequest(BaseModel):
@@ -72,8 +80,11 @@ async def create_proposal(
     repository: RepositoryDependency,
     incident_repository: IncidentRepositoryDependency,
 ) -> RemediationProposal:
-    if incident_repository.get(str(payload.incident_id)) is None:
+    incident = incident_repository.get(str(payload.incident_id))
+    if incident is None:
         raise HTTPException(status_code=404, detail="incident not found")
+    if payload.namespace != incident.namespace or payload.deployment != incident.service:
+        raise HTTPException(status_code=409, detail="proposal scope does not match incident")
     proposal = RemediationProposal(**payload.model_dump())
     repository.add_proposal(proposal)
     incident_repository.update_status(

@@ -99,6 +99,51 @@ def test_create_proposal_rejects_unknown_incident() -> None:
     assert response.json()["detail"] == "incident not found"
 
 
+def test_create_proposal_rejects_scope_different_from_incident() -> None:
+    incident_id = uuid4()
+    client = TestClient(app_with_incident(incident_id))
+
+    wrong_namespace = client.post(
+        "/remediation/proposals",
+        json={
+            "incident_id": str(incident_id),
+            "action": "rollback_deployment",
+            "namespace": "production",
+            "deployment": "checkout",
+        },
+    )
+    wrong_deployment = client.post(
+        "/remediation/proposals",
+        json={
+            "incident_id": str(incident_id),
+            "action": "rollback_deployment",
+            "namespace": "demo",
+            "deployment": "payments",
+        },
+    )
+
+    assert wrong_namespace.status_code == 409
+    assert wrong_deployment.status_code == 409
+    assert client.get("/incidents").json()[0]["status"] == "received"
+
+
+def test_create_proposal_rejects_unbounded_kubernetes_name() -> None:
+    incident_id = uuid4()
+    client = TestClient(app_with_incident(incident_id))
+
+    response = client.post(
+        "/remediation/proposals",
+        json={
+            "incident_id": str(incident_id),
+            "action": "rollback_deployment",
+            "namespace": "demo",
+            "deployment": "checkout,app",
+        },
+    )
+
+    assert response.status_code == 422
+
+
 def test_execute_endpoint_is_disabled_without_injected_executor() -> None:
     client = TestClient(create_app())
 

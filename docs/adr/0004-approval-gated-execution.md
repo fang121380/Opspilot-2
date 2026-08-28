@@ -13,6 +13,7 @@ Opspilot 2 will eventually invoke a Kubernetes rollout rollback. Even a narrowly
 The execution path requires all of the following:
 
 1. A typed proposal with a known incident, action, namespace, and deployment.
+   Proposal scope must exactly match the incident service and namespace; it cannot redirect an approved incident toward another workload.
 2. A policy allowlist that accepts both the action and namespace.
 3. An approval that matches the exact proposal ID.
 4. An approval whose expiry is later than the execution time.
@@ -31,4 +32,3 @@ Trade-offs:
 
 - An operator must approve each mutation in the MVP.
 - Production policy configuration and user identity verification are deferred until authentication is introduced.
-
