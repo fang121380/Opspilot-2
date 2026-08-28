@@ -15,7 +15,9 @@ case "${1:-up}" in
     if ! kind get clusters | grep -Fx "$CLUSTER_NAME" >/dev/null; then
       kind create cluster --name "$CLUSTER_NAME" --config "$ROOT_DIR/infra/kind/cluster.yaml"
     fi
+    docker build -t opspilot-2/api:dev "$ROOT_DIR"
     docker build -t opspilot-2/checkout:dev "$ROOT_DIR/demo"
+    kind load docker-image --name "$CLUSTER_NAME" opspilot-2/api:dev
     kind load docker-image --name "$CLUSTER_NAME" opspilot-2/checkout:dev
     kubectl apply -f "$ROOT_DIR/infra/kind/namespace.yaml"
     kubectl apply -f "$ROOT_DIR/infra/kind/opspilot-rbac.yaml"
@@ -24,9 +26,13 @@ case "${1:-up}" in
     kubectl delete clusterrole opspilot-2-prometheus --ignore-not-found
     kubectl delete clusterrolebinding opspilot-2-prometheus --ignore-not-found
     kubectl apply -f "$ROOT_DIR/infra/kind/prometheus.yaml"
+    kubectl apply -f "$ROOT_DIR/infra/kind/opspilot.yaml"
     kubectl -n demo rollout restart deployment/prometheus
+    kubectl -n demo rollout restart deployment/opspilot-2
     kubectl -n demo rollout status deployment/checkout --timeout=120s
     kubectl -n demo rollout status deployment/prometheus --timeout=120s
+    kubectl -n demo rollout status deployment/opspilot-2 --timeout=120s
+    kubectl -n demo rollout status deployment/alertmanager --timeout=120s
     ;;
   inject-failure)
     kubectl -n demo patch deployment checkout --type=strategic \

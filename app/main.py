@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
+from kubernetes_asyncio import client
 
 from app.adapters.kubernetes_client import from_kubeconfig
 from app.adapters.prometheus import PrometheusMetricsAdapter
@@ -13,7 +14,9 @@ from app.api.jobs import router as jobs_router
 from app.api.prometheus import router as prometheus_router
 from app.api.remediation import router as remediation_router
 from app.config import settings
+from app.executor.kubernetes import KubernetesRollbackClient
 from app.observability.metrics import metrics_app
+from app.policy.remediation import RemediationExecutor, RemediationPolicy
 from app.storage.audit import AuditRepository
 from app.storage.incidents import IncidentRepository
 from app.storage.remediation import RemediationRepository
@@ -52,6 +55,10 @@ def create_app(
                     prometheus=prometheus,
                     audit_repository=runtime_app.state.audit_repository,
                 )
+                if runtime_app.state.remediation_executor is None:
+                    runtime_app.state.remediation_executor = runtime_remediation_executor(
+                        client.AppsV1Api(kubernetes_client), settings.remediation_namespaces()
+                    )
                 logger.info("已配置 Kubernetes 和 Prometheus 调查依赖")
             except Exception:  # noqa: BLE001 - 运行时依赖应保持 API 可用
                 logger.exception("无法配置调查依赖，调查接口将返回 503")
@@ -91,6 +98,17 @@ def create_app(
     app.include_router(jobs_router)
     app.mount("/metrics", metrics_app)
     return app
+
+
+def runtime_remediation_executor(
+    apps_api: client.AppsV1Api, allowed_namespaces: set[str]
+) -> RemediationExecutor:
+    """构造运行时唯一允许的、审批门控的 Kubernetes 回滚执行器。"""
+
+    return RemediationExecutor(
+        policy=RemediationPolicy(allowed_namespaces=allowed_namespaces),
+        rollback_client=KubernetesRollbackClient(apps_api),
+    )
 
 
 app = create_app()

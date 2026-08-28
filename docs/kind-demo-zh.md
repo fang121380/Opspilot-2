@@ -18,7 +18,7 @@ make run
 ./scripts/kind-demo.sh up
 ```
 
-脚本会创建两节点 Kind 集群、构建演示服务镜像、加载镜像、部署 checkout 和 Prometheus，并等待 Deployment 就绪。
+脚本会创建两节点 Kind 集群、构建 API 与演示服务镜像、加载镜像、部署 checkout、Prometheus、Alertmanager 和 Opspilot 2 API，并等待 Deployment 就绪。Alertmanager 只转发 firing 告警到集群内 API；事件关闭仍由 Opspilot 的验证工作流负责。
 
 `infra/kind/opspilot-rbac.yaml` 创建了专用 `opspilot-2` ServiceAccount。它只可读取 demo 命名空间中的 Deployment、ReplicaSet、Pod 和 Pod 日志，并且仅能 patch Deployment 用于审批后的回滚；不能读取 Secret、修改 RBAC、执行 Shell 或访问其他命名空间。
 
@@ -43,6 +43,13 @@ curl -s http://127.0.0.1:19090/api/v1/alerts
 
 ```bash
 curl -s 'http://127.0.0.1:19090/api/v1/query?query=sum(rate(http_requests_total%7Bservice%3D%22checkout%22%2Ccode%3D~%225..%22%7D%5B1m%5D))'
+```
+
+再转发 Opspilot 2 API，确认 Alertmanager 已创建事故：
+
+```bash
+kubectl -n demo port-forward service/opspilot-2 18000:8000
+curl -s http://127.0.0.1:18000/incidents
 ```
 
 ## 恢复和清理

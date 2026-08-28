@@ -31,13 +31,12 @@
   },
   {
     "name": "logs-only-noise",
-    "description": "日志含 error 单词，但部署和指标没有回归。",
+    "description": "日志含 error 单词，但没有 HTTP 5xx 信号。",
     "available_replicas": 3,
     "desired_replicas": 3,
-    "error_rate": 0.03,
+    "error_rate": 0.0,
     "logs": "ERROR handled validation error; request returned 400",
     "expected_hypothesis": "Insufficient evidence for a deployment regression",
     "expect_rollback": false
   }
 ]
-

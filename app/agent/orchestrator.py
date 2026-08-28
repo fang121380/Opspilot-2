@@ -49,11 +49,16 @@ class IncidentInvestigator:
             pods = await self._kubernetes.list_pods(
                 namespace=incident.namespace, label_selector=f"app={incident.service}"
             )
-            recent_logs = ""
-            if pods:
-                recent_logs = await self._kubernetes.tail_pod_logs(
-                    namespace=incident.namespace, pod_name=pods[0].name
+            # 单个正常副本可能恰好没有承接失败请求；最多采集三个匹配 Pod 的
+            # 有界日志，既保留证据覆盖面，又不会把日志读取扩展成无界操作。
+            log_chunks: list[str] = []
+            for pod in pods[:3]:
+                log_chunks.append(
+                    await self._kubernetes.tail_pod_logs(
+                        namespace=incident.namespace, pod_name=pod.name
+                    )
                 )
+            recent_logs = "\n".join(log_chunks)
 
             query = (
                 "sum(rate(http_requests_total{"

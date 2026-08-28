@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import logging
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from prometheus_client import Counter, Histogram, generate_latest
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+logger = logging.getLogger("checkout")
 
 REQUESTS = Counter(
     "http_requests_total",
@@ -37,6 +41,7 @@ class CheckoutHandler(BaseHTTPRequestHandler):
                 return
 
             if self.path == "/checkout" and self.failure_mode == "always":
+                logger.error("checkout request failed: injected failure mode is active")
                 self._respond(500, b"checkout unavailable")
                 return
 

@@ -16,7 +16,7 @@ Deploy version `v2` with a deterministic application error. The service begins r
 1. Prometheus sends the alert to `POST /webhooks/prometheus`.
 2. OpsPilot creates incident `inc-<id>` and records the received timestamp.
 3. The orchestrator queries deployment rollout status, pod conditions, recent events, error-rate metrics, and recent logs.
-4. The analysis output states that `checkout v2` is the leading hypothesis and cites the specific observations.
+4. The analysis output states that `checkout v2` is the leading hypothesis and cites the HTTP 5xx signal and matching application error logs. Pod readiness remains healthy in this application-level failure scenario.
 5. OpsPilot proposes `rollback_deployment(checkout, demo)` with a dry-run result.
 6. The API exposes the proposal as `awaiting_approval`.
 7. An operator approves the proposal. An expired or mismatched approval is rejected.
@@ -31,4 +31,3 @@ Deploy version `v2` with a deterministic application error. The service begins r
 - Approval expired: executor refuses to run.
 - Action outside the allowlist: policy engine refuses to create an executable request.
 - Rollback does not improve the signal: incident remains unresolved and no second mutation is attempted automatically.
-

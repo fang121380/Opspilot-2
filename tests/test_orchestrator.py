@@ -11,6 +11,11 @@ from app.storage.audit import AuditEventType, AuditRepository
 
 
 class FakeKubernetes:
+    log_requests: list[str]
+
+    def __init__(self) -> None:
+        self.log_requests = []
+
     async def deployment_status(self, *, namespace: str, name: str):
         return DeploymentStatus(
             name=name,
@@ -24,6 +29,7 @@ class FakeKubernetes:
         return [SimpleNamespace(name="checkout-123")]
 
     async def tail_pod_logs(self, *, namespace: str, pod_name: str, container: str | None = None):
+        self.log_requests.append(pod_name)
         return "ERROR request failed\n"
 
 
@@ -67,6 +73,36 @@ async def test_investigator_collects_evidence_analyzes_and_audits() -> None:
         event.trace_id and len(event.trace_id) == 32
         for event in audit.list_for_incident(incident.id)
     )
+
+
+@pytest.mark.asyncio
+async def test_investigator_combines_bounded_logs_from_matching_pods() -> None:
+    class MultiPodKubernetes(FakeKubernetes):
+        async def list_pods(self, *, namespace: str, label_selector: str):
+            return [SimpleNamespace(name=f"checkout-{index}") for index in range(4)]
+
+        async def tail_pod_logs(
+            self, *, namespace: str, pod_name: str, container: str | None = None
+        ):
+            self.log_requests.append(pod_name)
+            return "INFO request completed" if pod_name == "checkout-0" else "ERROR request failed"
+
+    incident = Incident(
+        alert_name="HighErrorRate",
+        alert_fingerprint="alert-123",
+        service="checkout",
+        namespace="demo",
+        started_at=datetime(2026, 8, 28, 0, 55, tzinfo=UTC),
+    )
+    kubernetes = MultiPodKubernetes()
+    investigator = IncidentInvestigator(
+        kubernetes=kubernetes, prometheus=FakePrometheus(), audit_repository=AuditRepository()
+    )
+
+    outcome = await investigator.investigate(incident)
+
+    assert kubernetes.log_requests == ["checkout-0", "checkout-1", "checkout-2"]
+    assert outcome.recommended_actions[0].action == "rollback_deployment"
 
 
 @pytest.mark.asyncio

@@ -14,6 +14,9 @@ rules:
     resources: ["deployments", "replicasets"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["apps"]
+    resources: ["deployments/status"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["patch"]
   - apiGroups: [""]
@@ -36,4 +39,3 @@ subjects:
   - kind: ServiceAccount
     name: opspilot-2
     namespace: demo
-

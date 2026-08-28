@@ -64,6 +64,26 @@ def test_identifies_deployment_regression_from_converging_evidence() -> None:
     ]
 
 
+def test_recommends_rollback_when_application_error_keeps_pods_ready() -> None:
+    outcome = analyze_deployment_regression(
+        incident(),
+        IncidentEvidence(
+            deployment=DeploymentStatus(
+                name="checkout",
+                namespace="demo",
+                desired_replicas=2,
+                available_replicas=2,
+                updated_replicas=2,
+            ),
+            error_rate=high_error_rate(),
+            recent_logs="ERROR checkout request failed\n",
+        ),
+    )
+
+    assert outcome.hypotheses[0].title == "Recent deployment regression"
+    assert outcome.recommended_actions[0].action == "rollback_deployment"
+
+
 def test_refuses_remediation_when_evidence_is_insufficient() -> None:
     outcome = analyze_deployment_regression(
         incident(),

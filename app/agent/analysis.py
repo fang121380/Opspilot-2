@@ -47,15 +47,15 @@ def analyze_deployment_regression(
 ) -> AnalysisOutcome:
     """Produce an inspectable first-pass diagnosis for the MVP demo scenario.
 
-    This rule intentionally requires three independent signals before recommending a
-    mutation: reduced Deployment availability, non-zero HTTP 5xx rate, and error
-    logs. An LLM may later summarize this outcome but cannot bypass this gate.
+    This rule requires an elevated HTTP 5xx rate and matching error logs before
+    recommending a mutation. Deployment availability remains evidence, but an
+    application-level regression can return 500 while every Pod stays ready.
+    An LLM may later summarize this outcome but cannot bypass this gate.
     """
 
     deployment = evidence.deployment
     error_rate = max((sample.value for sample in evidence.error_rate.samples), default=0.0)
     has_error_logs = "error" in evidence.recent_logs.lower()
-    availability_regressed = deployment.available_replicas < deployment.desired_replicas
     elevated_error_rate = error_rate > 0.0
 
     references = [
@@ -86,11 +86,11 @@ def analyze_deployment_regression(
         ),
     ]
 
-    if availability_regressed and elevated_error_rate and has_error_logs:
+    if elevated_error_rate and has_error_logs:
         return AnalysisOutcome(
             summary=(
-                f"{incident.service or deployment.name} has elevated 5xx traffic while the "
-                f"latest Deployment is not fully available."
+                f"{incident.service or deployment.name} has elevated 5xx traffic with matching "
+                "application error logs."
             ),
             impact="The service is likely returning errors to users.",
             confidence=0.85,
@@ -99,8 +99,8 @@ def analyze_deployment_regression(
                 RootCauseHypothesis(
                     title="Recent deployment regression",
                     rationale=(
-                        "Reduced replica availability, elevated HTTP 5xx rate, and recent error "
-                        "logs converge on a failing rollout."
+                        "Elevated HTTP 5xx rate and recent error logs converge on an application "
+                        "regression after the rollout."
                     ),
                     confidence=0.85,
                     evidence_ids=[reference.id for reference in references],
@@ -127,8 +127,8 @@ def analyze_deployment_regression(
             RootCauseHypothesis(
                 title="Insufficient evidence for a deployment regression",
                 rationale=(
-                    "A rollback requires reduced availability, an elevated 5xx signal, and "
-                    "error-level logs. At least one signal is missing."
+                    "A rollback requires both an elevated 5xx signal and error-level logs. "
+                    "At least one signal is missing."
                 ),
                 confidence=0.2,
                 evidence_ids=[reference.id for reference in references],
