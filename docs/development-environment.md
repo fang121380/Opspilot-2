@@ -8,16 +8,16 @@
 - Go 1.27.0 at `/Users/andrew/.local/opt/go-1.27.0`.
 - Helm 3.19.0 at `/Users/andrew/.local/bin/helm`.
 
-## Installed but pending normal-Terminal verification
+## 已验证的云原生工具
 
-- `kubectl` at `/Users/andrew/.local/bin/kubectl`.
-- `kind` at `/Users/andrew/.local/bin/kind`.
+- `kubectl` v1.37.0 at `/Users/andrew/.local/bin/kubectl`.
+- `kind` v0.33.0 at `/Users/andrew/.local/bin/kind`.
 
-Both files are native Apple Silicon executables with executable permissions. In the current Codex process they terminate with exit code 137 before printing a version, so cluster setup is intentionally deferred until they can be checked outside this execution sandbox.
+Both are native Apple Silicon executables and now pass version checks in the current terminal environment.
 
 ## Still required for the integration milestone
 
-Docker Desktop provides the container runtime required by Kind. Install it from Docker's official distribution, start the application, then verify:
+Docker Desktop provides the container runtime required by Kind. It is the only remaining local prerequisite. Install it from Docker's official distribution, start the application, then verify:
 
 ```bash
 docker version
@@ -35,4 +35,3 @@ python3 -m venv .venv
 make test
 make lint
 ```
-
