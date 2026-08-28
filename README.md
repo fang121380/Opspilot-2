@@ -47,9 +47,11 @@ The API health endpoint is available at `http://127.0.0.1:8000/health` and the O
 - [x] Read-only Kubernetes and Prometheus diagnostics
 - [x] Evidence-based deployment-regression analysis
 - [x] Deterministic incident investigation orchestrator
+- [x] Explicit investigation API
 - [x] Approval-gated remediation policy and executor boundary
 - [x] Audit and OpenTelemetry instrumentation
 - [x] Kind failure drill assets (runtime verification pending Docker)
+- [x] Read-only MCP diagnostic server
 
 ## Current capabilities
 
@@ -60,6 +62,7 @@ The API health endpoint is available at `http://127.0.0.1:8000/health` and the O
 - Matching, expiring human approval required before the rollback client can be invoked.
 - Replaceable OpenAI-compatible text provider; model output is narration only and has no tool or mutation authority.
 - Reproducible Kind manifests and a deterministic `checkout` failure injector are included; execution waits for Docker Desktop.
+- Docker Compose packaging is included for the API, PostgreSQL, and Prometheus; PostgreSQL wiring remains the next persistence milestone.
 
 ## Environment status
 
