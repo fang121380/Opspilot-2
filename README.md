@@ -23,6 +23,9 @@ Alertmanager Webhook
         |
         v
 Kubernetes AppsV1 回滚执行 + 审计和追踪
+        |
+        v
+只读指标验证 -> resolved 或保持 verifying
 ```
 
 文档入口：[产品范围](docs/product-scope.md)、[架构](docs/architecture.md)、[演示场景](docs/demo-scenario.md)、[部署说明](docs/deployment-zh.md)、[Kind 故障演练](docs/kind-demo-zh.md)、[中文学习指南](docs/learning-guide.md)、[评测基线](docs/evaluation-zh.md)、[面试讲解提纲](docs/interview-zh.md)、[ADR](docs/adr/) 和 [开源项目调研](docs/research/open-source-landscape.md)。
@@ -47,7 +50,7 @@ make run
 - Incident、Audit、Remediation Proposal 和 Approval 的 SQLAlchemy 持久化；未配置数据库时使用内存模式。
 - 类型化、受边界约束的 Prometheus 查询与 Kubernetes Deployment/Pod/日志只读诊断。
 - 固定调查编排：Deployment → Pod → 日志 → HTTP 5xx → 证据分析。
-- 只有 Deployment 可用副本下降、5xx 非零、错误日志同时出现时才建议回滚。
+- 只有 HTTP 5xx 非零且匹配 Pod 的错误日志同时出现时才建议回滚；Pod Ready 不等于业务健康。
 - 独立的提案、审批和执行 API；执行阶段只接受服务端保存的 proposal/approval ID。
 - 动作白名单、命名空间范围、审批匹配、审批过期四层防护。
 - 使用当前 Kubernetes AppsV1 API 从前一 ReplicaSet 模板回滚 Deployment。
@@ -55,6 +58,8 @@ make run
 - OpenAI-compatible LLM 文本层；模型没有工具或变更权限。
 - MCP v2 只读诊断服务器，仅提供 Deployment、Pod 和固定 HTTP 5xx 查询工具。
 - 异步调查 Job API，可轮询 queued/running/succeeded/failed 状态。
+- received → investigating → awaiting_approval → executing → verifying → resolved 状态持久化。
+- 只读修复验证、防审批重放、运行时失败脱敏和未知写结果的保守停留策略。
 - Dockerfile、Docker Compose、Kind 演练清单、故障注入器和离线评测集。
 - Kind 中的专用 ServiceAccount 和最小 RBAC：没有 Secret、Shell、RBAC 修改或跨命名空间权限。
 - `make demo` 可以无 Docker 演示告警、调查、审批、执行和审计的完整 API 闭环。
@@ -62,20 +67,20 @@ make run
 ## 当前验证
 
 ```text
-48 个单元/集成测试通过
-代码覆盖率 90%+
+70 个单元/集成测试通过
+代码覆盖率 90.29%
 Ruff 静态检查通过
 离线评测 4/4 通过
 kubectl v1.37.0 和 kind v0.33.0 已验证
+Docker Engine 29.7.2 与 Docker Desktop 4.88.1 已验证
+Kind 中 Prometheus -> Alertmanager -> Opspilot API -> 调查建议已实机验证
 ```
 
-## 仍待实机验证
-
-Docker Desktop 是本机唯一缺少的依赖。安装并启动后可执行：
+## Kind 实机演练
 
 ```bash
 ./scripts/kind-demo.sh up
 ./scripts/kind-demo.sh inject-failure
 ```
 
-随后验证 Prometheus 告警、真实 Kubernetes 调查和审批回滚闭环。Docker 官方安装包的断点下载文件不会进入 Git 仓库。
+脚本会部署 checkout、Prometheus、Alertmanager 和集群内 Opspilot API。当前已验证告警创建事故、同步/异步真实调查、最小 RBAC 和人工审批前阻断；实际回滚必须由操作员通过审批 API 明确授权，不在自动脚本中执行。完整步骤见 [Kind 故障演练](docs/kind-demo-zh.md)。

@@ -7,6 +7,7 @@
 - Node.js 24.15.0 and npm 11.12.1.
 - Go 1.27.0 at `/Users/andrew/.local/opt/go-1.27.0`.
 - Helm 3.19.0 at `/Users/andrew/.local/bin/helm`.
+- Docker Desktop 4.88.1 with Docker Engine 29.7.2.
 
 ## 已验证的云原生工具
 
@@ -15,9 +16,9 @@
 
 Both are native Apple Silicon executables and now pass version checks in the current terminal environment.
 
-## Still required for the integration milestone
+## Docker and Kind integration
 
-Docker Desktop provides the container runtime required by Kind. It is the only remaining local prerequisite. Install it from Docker's official distribution, start the application, then verify:
+Docker Desktop is installed from Docker's official Apple Silicon distribution and the two-node `opspilot-2` Kind cluster has been exercised successfully. Verify the active toolchain with:
 
 ```bash
 docker version
