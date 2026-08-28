@@ -27,3 +27,23 @@ def test_repository_deduplicates_only_active_incidents() -> None:
 
     assert deduplicated is False
     assert repeated.id != first.id
+
+
+def test_repository_claims_expected_status_only_once() -> None:
+    repository = IncidentRepository()
+    created, _ = repository.create_or_get_active(incident())
+
+    claimed = repository.transition_status(
+        str(created.id),
+        expected=IncidentStatus.RECEIVED,
+        target=IncidentStatus.EXECUTING,
+    )
+    replay = repository.transition_status(
+        str(created.id),
+        expected=IncidentStatus.RECEIVED,
+        target=IncidentStatus.EXECUTING,
+    )
+
+    assert claimed is not None
+    assert claimed.status == IncidentStatus.EXECUTING
+    assert replay is None

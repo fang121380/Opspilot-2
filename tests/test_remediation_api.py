@@ -185,7 +185,18 @@ def test_execute_endpoint_runs_only_with_explicit_executor_and_approval() -> Non
         "/remediation/execute",
         json={"proposal_id": proposal["id"], "approval_id": approval["id"]},
     )
+    repeated_proposal = client.post(
+        "/remediation/proposals",
+        json={
+            "incident_id": str(incident_id),
+            "action": "rollback_deployment",
+            "namespace": "demo",
+            "deployment": "checkout",
+        },
+    )
     assert replay.status_code == 409
+    assert repeated_proposal.status_code == 409
+    assert client.get("/incidents").json()[0]["status"] == "verifying"
     assert rollback_client.calls == 1
 
 

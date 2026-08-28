@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, create_engine, select
+from sqlalchemy import DateTime, ForeignKey, String, Text, create_engine, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -137,6 +137,40 @@ class SqlAlchemyStore:
                 else row.alert_fingerprint
             )
             session.flush()
+            return self._to_incident(row)
+
+    def transition_status(
+        self,
+        incident_id: str,
+        *,
+        expected: IncidentStatus,
+        target: IncidentStatus,
+    ) -> Incident | None:
+        """Atomically claim one workflow transition across processes."""
+
+        with self._sessions.begin() as session:
+            result = session.execute(
+                update(IncidentRow)
+                .where(
+                    IncidentRow.id == incident_id,
+                    IncidentRow.status == expected.value,
+                )
+                .values(
+                    status=target.value,
+                    updated_at=datetime.now(UTC),
+                    active_fingerprint=(
+                        None
+                        if target in {IncidentStatus.RESOLVED, IncidentStatus.CLOSED}
+                        else IncidentRow.alert_fingerprint
+                    ),
+                )
+                .execution_options(synchronize_session=False)
+            )
+            if result.rowcount == 0:
+                return None
+            row = session.get(IncidentRow, incident_id)
+            if row is None:  # pragma: no cover - protected by the successful update
+                raise KeyError(incident_id)
             return self._to_incident(row)
 
     def close(self, incident_id: str) -> None:

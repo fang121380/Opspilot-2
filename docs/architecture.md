@@ -69,7 +69,7 @@ received -> investigating -> awaiting_approval -> executing -> verifying -> reso
 ```
 
 The API persists each transition in both the in-memory repository and SQLAlchemy store. A rejected, missing, mismatched, or expired approval cannot advance the incident to a mutating state.
-The executor accepts a write only from `awaiting_approval`; moving to `executing` before the Kubernetes call prevents replay within the single-process MVP. A production multi-replica deployment must replace this in-process ordering guarantee with a database compare-and-swap or distributed lock.
+The executor atomically claims `awaiting_approval -> executing` with a conditional database update before calling Kubernetes. Shared-PostgreSQL API replicas therefore cannot execute the same incident concurrently. Once an incident reaches `executing`, `verifying`, or a terminal state, creating another proposal cannot reset it to `awaiting_approval`.
 
 ## Initial technology choices
 

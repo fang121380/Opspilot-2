@@ -53,7 +53,7 @@
 
 Kubernetes 写调用抛出异常时，系统不能判断请求是否已被集群部分接受，因此事故保守停留在 `executing`，返回脱敏 503 并记录 `remediation.failed`。它不会自动重试或把状态退回审批阶段，必须由操作员核对 Deployment 和审计记录。
 
-事故状态会随流程持久化：接收告警后为 `received`，调查时为 `investigating`，出现修复建议后为 `awaiting_approval`，执行期间为 `executing`，写操作成功后进入 `verifying`。缺少、过期或不匹配的审批会把状态保持在 `awaiting_approval`，不会调用 Kubernetes 写接口。
+事故状态会随流程持久化：接收告警后为 `received`，调查时为 `investigating`，出现修复建议后为 `awaiting_approval`，执行期间为 `executing`，写操作成功后进入 `verifying`。执行权通过 `awaiting_approval -> executing` 的数据库比较并交换原子抢占，多副本并发请求只有一个能继续；进入执行、验证或终态后也不能用新提案把状态退回。缺少、过期或不匹配的审批会把状态保持在 `awaiting_approval`，不会调用 Kubernetes 写接口。设计取舍见 [ADR-0014](adr/0014-atomic-remediation-state-transitions.md)。
 
 ## 6. 理解审计和追踪
 

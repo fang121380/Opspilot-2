@@ -59,7 +59,7 @@ make run
 - MCP v2 只读诊断服务器，仅提供 Deployment、Pod 和固定 HTTP 5xx 查询工具。
 - 异步调查 Job API，可轮询 queued/running/succeeded/failed 状态。
 - received → investigating → awaiting_approval → executing → verifying → resolved 状态持久化。
-- 只读修复验证、防审批重放、运行时失败脱敏和未知写结果的保守停留策略。
+- 数据库原子执行权抢占、只读修复验证、防审批重放、运行时失败脱敏和未知写结果的保守停留策略。
 - Dockerfile、Docker Compose、Kind 演练清单、故障注入器和离线评测集。
 - Kind 中的专用 ServiceAccount 和最小 RBAC：没有 Secret、Shell、RBAC 修改或跨命名空间权限。
 - `make demo` 可以无 Docker 演示告警、调查、审批、执行和审计的完整 API 闭环。
@@ -67,8 +67,8 @@ make run
 ## 当前验证
 
 ```text
-70 个单元/集成测试通过
-代码覆盖率 90.29%
+82 个单元/集成测试通过
+代码覆盖率 90.99%
 Ruff 静态检查通过
 离线评测 4/4 通过
 kubectl v1.37.0 和 kind v0.33.0 已验证

@@ -64,6 +64,35 @@ def test_sql_store_updates_incident_status_and_timestamp(tmp_path: Path) -> None
     assert store.get(str(incident.id)).status == IncidentStatus.AWAITING_APPROVAL
 
 
+def test_sql_store_allows_only_one_concurrent_status_claim(tmp_path: Path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'status-claim.db'}"
+    stores = [SqlAlchemyStore(database_url), SqlAlchemyStore(database_url)]
+    incident, _ = stores[0].create_or_get_active(make_incident())
+    stores[0].update_status(str(incident.id), IncidentStatus.AWAITING_APPROVAL)
+    barrier = Barrier(2)
+    results: list[Incident | None] = []
+
+    def claim(store: SqlAlchemyStore) -> None:
+        barrier.wait(timeout=5)
+        results.append(
+            store.transition_status(
+                str(incident.id),
+                expected=IncidentStatus.AWAITING_APPROVAL,
+                target=IncidentStatus.EXECUTING,
+            )
+        )
+
+    threads = [Thread(target=claim, args=(store,)) for store in stores]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert sum(result is not None for result in results) == 1
+    assert stores[0].get(str(incident.id)).status == IncidentStatus.EXECUTING
+
+
 def test_sql_store_allows_new_incident_after_previous_one_resolves(tmp_path: Path) -> None:
     store = SqlAlchemyStore(f"sqlite:///{tmp_path / 'lifecycle.db'}")
     first, _ = store.create_or_get_active(make_incident("recurring-alert"))

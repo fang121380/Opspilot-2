@@ -86,11 +86,23 @@ async def create_proposal(
         raise HTTPException(status_code=404, detail="incident not found")
     if payload.namespace != incident.namespace or payload.deployment != incident.service:
         raise HTTPException(status_code=409, detail="proposal scope does not match incident")
+    if incident.status not in {
+        IncidentStatus.RECEIVED,
+        IncidentStatus.AWAITING_APPROVAL,
+    }:
+        raise HTTPException(
+            status_code=409,
+            detail=f"incident cannot accept a proposal from status {incident.status.value}",
+        )
+    transitioned = incident_repository.transition_status(
+        str(payload.incident_id),
+        expected=incident.status,
+        target=IncidentStatus.AWAITING_APPROVAL,
+    )
+    if transitioned is None:
+        raise HTTPException(status_code=409, detail="incident status changed; retry request")
     proposal = RemediationProposal(**payload.model_dump())
     repository.add_proposal(proposal)
-    incident_repository.update_status(
-        str(proposal.incident_id), IncidentStatus.AWAITING_APPROVAL
-    )
     audit_repository.append(
         event_type=AuditEventType.REMEDIATION_REQUESTED,
         incident_id=proposal.incident_id,
@@ -163,20 +175,33 @@ async def execute_remediation(
     approval = repository.get_approval(request.approval_id) if request.approval_id else None
     if request.approval_id and approval is None:
         raise HTTPException(status_code=404, detail="remediation approval not found")
-    incident = incident_repository.get(str(proposal.incident_id))
-    if incident is None:
+    if incident_repository.get(str(proposal.incident_id)) is None:
         raise HTTPException(status_code=404, detail="incident not found")
-    if incident.status != IncidentStatus.AWAITING_APPROVAL:
+    claimed = incident_repository.transition_status(
+        str(proposal.incident_id),
+        expected=IncidentStatus.AWAITING_APPROVAL,
+        target=IncidentStatus.EXECUTING,
+    )
+    if claimed is None:
+        incident = incident_repository.get(str(proposal.incident_id))
         REMEDIATION_OUTCOMES.labels(outcome="blocked").inc()
         raise HTTPException(
             status_code=409,
-            detail=f"incident cannot execute remediation from status {incident.status.value}",
+            detail=(
+                "incident cannot execute remediation from status "
+                f"{incident.status.value if incident else 'unknown'}"
+            ),
         )
     try:
-        incident_repository.update_status(str(proposal.incident_id), IncidentStatus.EXECUTING)
         result = await executor.execute(proposal, approval=approval)
+        transitioned = incident_repository.transition_status(
+            str(proposal.incident_id),
+            expected=IncidentStatus.EXECUTING,
+            target=IncidentStatus.VERIFYING,
+        )
+        if transitioned is None:
+            raise RuntimeError("incident execution claim was lost")
         REMEDIATION_OUTCOMES.labels(outcome="executed").inc()
-        incident_repository.update_status(str(proposal.incident_id), IncidentStatus.VERIFYING)
         audit_repository.append(
             event_type=AuditEventType.REMEDIATION_EXECUTED,
             incident_id=proposal.incident_id,
@@ -185,8 +210,10 @@ async def execute_remediation(
         return result
     except (PolicyDeniedError, ApprovalRequiredError, ApprovalExpiredError) as error:
         REMEDIATION_OUTCOMES.labels(outcome="rejected").inc()
-        incident_repository.update_status(
-            str(proposal.incident_id), IncidentStatus.AWAITING_APPROVAL
+        incident_repository.transition_status(
+            str(proposal.incident_id),
+            expected=IncidentStatus.EXECUTING,
+            target=IncidentStatus.AWAITING_APPROVAL,
         )
         audit_repository.append(
             event_type=AuditEventType.REMEDIATION_REJECTED,
