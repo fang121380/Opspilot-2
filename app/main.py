@@ -72,8 +72,11 @@ def create_app(
                 if runtime_app.state.verifier is None:
                     runtime_app.state.verifier = IncidentVerifier(prometheus)
                 logger.info("已配置 Kubernetes 和 Prometheus 调查依赖")
-            except Exception:  # noqa: BLE001 - 运行时依赖应保持 API 可用
-                logger.exception("无法配置调查依赖，调查接口将返回 503")
+            except Exception as error:  # noqa: BLE001 - 运行时依赖应保持 API 可用
+                logger.warning(
+                    "无法配置调查依赖，调查接口将返回 503（%s）",
+                    type(error).__name__,
+                )
                 if http_client is not None:
                     await http_client.aclose()
                     http_client = None

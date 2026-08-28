@@ -48,6 +48,7 @@ make run
 
 - Prometheus Alertmanager 兼容 Webhook，按活动 alert fingerprint 去重。
 - Incident、Audit、Remediation Proposal 和 Approval 的 SQLAlchemy 持久化；未配置数据库时使用内存模式。
+- Alembic 版本化迁移；可无损接管已知旧开发库，未知部分结构拒绝自动修改。
 - 类型化、受边界约束的 Prometheus 查询与 Kubernetes Deployment/Pod/日志只读诊断。
 - 固定调查编排：Deployment → Pod → 日志 → HTTP 5xx → 证据分析。
 - 只有 HTTP 5xx 非零且匹配 Pod 的错误日志同时出现时才建议回滚；Pod Ready 不等于业务健康。
@@ -67,8 +68,8 @@ make run
 ## 当前验证
 
 ```text
-82 个单元/集成测试通过
-代码覆盖率 90.99%
+87 个单元/集成测试通过
+代码覆盖率 90.84%
 Ruff 静态检查通过
 离线评测 4/4 通过
 kubectl v1.37.0 和 kind v0.33.0 已验证

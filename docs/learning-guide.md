@@ -92,7 +92,7 @@ Kubernetes 或 Prometheus 调查失败时，同步接口返回经过清理的 HT
 
 阅读 `Dockerfile`、`docker-compose.yml` 和 [部署说明](deployment-zh.md)。
 
-Docker 镜像只复制运行所需的应用代码，Compose 提供 PostgreSQL 和 Prometheus。本地无外部依赖时仍使用内存 Repository 做单元测试；设置 `OPSPILOT_DATABASE_URL` 后切换到 SQLAlchemy 持久化。
+Docker 镜像只复制运行所需的应用代码和 Alembic 版本链，Compose 提供 PostgreSQL 和 Prometheus。本地无外部依赖时仍使用内存 Repository 做单元测试；设置 `OPSPILOT_DATABASE_URL` 后切换到 SQLAlchemy 持久化。Compose 在 API 启动前运行安全迁移：已知旧结构升级、已知当前结构接管，未知部分结构拒绝运行。迁移策略见 [ADR-0015](adr/0015-version-and-adopt-relational-schema.md)。
 
 ## 11. 运行检查
 

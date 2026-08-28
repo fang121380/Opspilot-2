@@ -10,6 +10,8 @@ COPY pyproject.toml ./
 RUN touch README.md && mkdir app && touch app/__init__.py && pip install --no-cache-dir .
 COPY README.md ./
 COPY app ./app
+COPY alembic.ini ./
+COPY migrations ./migrations
 RUN pip install --no-cache-dir --no-deps .
 
 RUN addgroup --system app && adduser --system --ingroup app app

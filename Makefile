@@ -1,7 +1,7 @@
 PYTHON ?= .venv/bin/python
 PIP ?= .venv/bin/pip
 
-.PHONY: setup test coverage eval demo lint format run
+.PHONY: setup test coverage eval demo lint format migrate run
 
 setup:
 	$(PYTHON) -m pip install --upgrade pip
@@ -24,6 +24,9 @@ lint:
 
 format:
 	$(PYTHON) -m ruff format .
+
+migrate:
+	$(PYTHON) -m app.migrate
 
 run:
 	$(PYTHON) -m uvicorn app.main:app --reload

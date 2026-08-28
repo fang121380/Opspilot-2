@@ -68,7 +68,7 @@ make eval
 
 ## 当前量化结果
 
-- 82 个测试。
+- 87 个测试。
 - 90% 以上代码覆盖率门槛。
 - 4 个离线事故评测样本，其中包含 3 个禁止误回滚的负样本。
 - MCP Server 仅公开 3 个只读诊断工具。
@@ -78,6 +78,6 @@ make eval
 - 进程内 Job Manager 和内存模式适合 MVP；生产环境应替换为 Redis/队列和持久化 Job。
 - `approved_by` 当前是输入字段，生产环境应对接 OIDC/RBAC 证明身份。
 - MCP Server 已有工具契约和内存测试，下一步应加入 Streamable HTTP 鉴权网关。
-- Kind 中的 Prometheus、Alertmanager、集群内 API、最小 RBAC 与真实调查已经联调；PostgreSQL 多副本执行互斥已由原子状态迁移覆盖，生产迁移和身份认证仍需补齐。
+- Kind 中的 Prometheus、Alertmanager、集群内 API、最小 RBAC 与真实调查已经联调；PostgreSQL 多副本执行互斥和 Alembic 安全迁移已覆盖，生产身份认证与持久化任务队列仍需补齐。
 
 这些限制不是隐藏缺陷。面试时应明确说明：MVP 已将关键安全边界写入代码和测试，下一阶段会把分布式运行时能力替换为持久化、认证和队列组件。
