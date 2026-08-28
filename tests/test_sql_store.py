@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Barrier, Thread
 
 from app.domain.incidents import Incident, IncidentStatus
 from app.policy.remediation import Approval, RemediationProposal
@@ -73,6 +74,52 @@ def test_sql_store_allows_new_incident_after_previous_one_resolves(tmp_path: Pat
     assert deduplicated is False
     assert second.id != first.id
     assert len(store.list()) == 2
+
+
+def test_sql_store_keeps_only_one_active_fingerprint(tmp_path: Path) -> None:
+    store = SqlAlchemyStore(f"sqlite:///{tmp_path / 'active-fingerprint.db'}")
+
+    first, _ = store.create_or_get_active(make_incident("active-alert"))
+    second, deduplicated = store.create_or_get_active(make_incident("active-alert"))
+
+    assert deduplicated is True
+    assert second.id == first.id
+
+
+def test_sql_store_deduplicates_concurrent_active_fingerprints(tmp_path: Path) -> None:
+    database_url = f"sqlite:///{tmp_path / 'concurrent-fingerprint.db'}"
+    stores = [SqlAlchemyStore(database_url), SqlAlchemyStore(database_url)]
+    barrier = Barrier(2)
+    results: list[tuple[Incident, bool]] = []
+
+    for store in stores:
+        original = store._incident_row
+
+        def synchronized_row(
+            incident: Incident, *, _original=original
+        ):  # pragma: no branch
+            barrier.wait(timeout=5)
+            return _original(incident)
+
+        store._incident_row = synchronized_row  # type: ignore[method-assign]
+
+    threads = [
+        Thread(
+            target=lambda current=store: results.append(
+                current.create_or_get_active(make_incident("concurrent-alert"))
+            )
+        )
+        for store in stores
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert len(results) == 2
+    assert {str(incident.id) for incident, _ in results} == {str(stores[0].list()[0].id)}
+    assert sorted(deduplicated for _, deduplicated in results) == [False, True]
 
 
 def test_sql_store_persists_proposal_and_approval_after_reopening(tmp_path: Path) -> None:

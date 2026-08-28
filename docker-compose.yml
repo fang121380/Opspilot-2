@@ -34,11 +34,9 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
   prometheus:
-    image: prom/prometheus:v3.5.0
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./infra/compose/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    build:
+      context: ./infra/compose
+      dockerfile: Dockerfile.prometheus
 
 volumes:
   postgres-data:
