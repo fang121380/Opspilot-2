@@ -55,7 +55,15 @@
 
 这里的核心概念是**可追溯性**：发生误判时，必须知道系统收到了什么、查了什么、为什么做出决定。
 
-## 7. 运行检查
+## 7. 理解事故调查编排器
+
+阅读 `app/agent/orchestrator.py` 和 [ADR-0006](adr/0006-deterministic-investigation-orchestrator.md)。
+
+调查编排器按固定顺序读取 Deployment、Pod、日志和 Prometheus 指标，然后调用确定性分析器。诊断完成和分析完成分别写入审计事件，因此可以区分“外部数据没拿到”和“分析规则没有命中”。
+
+这里的核心概念是**可重放基线**：在加入 LLM 的自适应工具调用之前，先让同一事故每次都走同一条可测试路径。
+
+## 8. 运行检查
 
 ```bash
 make test
@@ -64,4 +72,3 @@ make lint
 ```
 
 单元测试不依赖 Kubernetes 集群或在线 LLM。Kind 故障演练和真实 Collector 属于后续集成阶段。
-
