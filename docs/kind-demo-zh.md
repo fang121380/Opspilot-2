@@ -66,7 +66,7 @@ curl -s -X POST http://127.0.0.1:18000/remediation/proposals \
   -d '{"incident_id":"<incident-id>","action":"rollback_deployment","namespace":"demo","deployment":"checkout"}'
 ```
 
-也可以用异步任务接口执行相同调查。它先返回 Job ID，任务完成后会把事故状态推进到 `awaiting_approval`：
+也可以用异步任务接口执行相同调查。它先返回 Job ID；有修复建议时会把事故状态推进到 `awaiting_approval`，没有建议或调查失败时安全回到 `received`：
 
 ```bash
 curl -s -X POST http://127.0.0.1:18000/incidents/<incident-id>/investigate/jobs
@@ -107,7 +107,11 @@ curl -s -X POST http://127.0.0.1:18000/remediation/execute \
 curl -s -X POST http://127.0.0.1:18000/incidents/<incident-id>/verify
 ```
 
-提案端点只允许 `received` 事故创建第一份动作；事故进入 `awaiting_approval` 后重复提案返回 HTTP 409。执行端点只接受处于 `awaiting_approval` 的事故，并用数据库条件更新原子抢占 `executing` 状态。第一次写操作成功后进入 `verifying`；重复提交同一 proposal/approval 或尝试为执行中、验证中、终态事故重新创建提案都会返回 HTTP 409，不能触发第二次回滚。Kind 演练使用内存存储和一个 API 副本；共享 PostgreSQL 的多副本部署使用相同的比较并交换契约保证只有一个副本取得执行权。
+提案端点允许 `received` 或 `awaiting_approval` 事故创建第一份动作；重复提案返回 HTTP 409。执行端点只接受处于 `awaiting_approval` 的事故，并用数据库条件更新原子抢占 `executing` 状态。第一次写操作成功后进入 `verifying`；重复提交同一 proposal/approval 或尝试为执行中、验证中、终态事故重新创建提案都会返回 HTTP 409，不能触发第二次回滚。Kind 演练使用内存存储和一个 API 副本；共享 PostgreSQL 的多副本部署使用相同的比较并交换契约保证只有一个副本取得执行权。
+
+## 最新实机验收
+
+2026-08-31 使用当前 API 镜像完成了一次不含写操作的真实闭环：checkout 故障注入后，Prometheus 报告 `HighErrorRate=firing`，Alertmanager 以独立 Bearer 凭据获得 Webhook `202`，Opspilot 创建事故并完成真实 Kubernetes/Prometheus 调查。分析记录了 `2/2` 可用 Pod、非零 5xx 速率和错误日志，给出 0.85 置信度的回滚建议；事故准确停在 `awaiting_approval`。本次没有创建审批、没有调用执行端点，也没有回滚 Deployment；故障保留以便按本文件的人工审批流程复现。
 
 ## 恢复和清理
 
@@ -116,4 +120,4 @@ curl -s -X POST http://127.0.0.1:18000/incidents/<incident-id>/verify
 ./scripts/kind-demo.sh down
 ```
 
-当前清单已经包含 Prometheus 的 Kubernetes 服务发现和仅限 `demo` 命名空间 Pod 的最小只读 RBAC。Alertmanager 转发到 Opspilot 2 的配置会在 API 端到端集成阶段加入，避免在尚未有可用地址时写死外部 URL。
+当前清单包含 Prometheus 的 Kubernetes 服务发现、仅限 `demo` 命名空间 Pod 的最小 RBAC，以及带独立 Bearer 凭据的 Alertmanager 到集群内 Opspilot 2 Service 的 Webhook 转发。

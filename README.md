@@ -77,6 +77,7 @@ Ruff 静态检查通过
 kubectl v1.37.0 和 kind v0.33.0 已验证
 Docker Engine 29.7.2 与 Docker Desktop 4.88.1 已验证
 Kind 中 Prometheus -> Alertmanager -> Opspilot API -> 调查建议已实机验证
+2026-08-31 实机闭环在人工审批门前停止，未执行回滚
 ```
 
 ## Kind 实机演练
