@@ -27,3 +27,19 @@ jobs:
       - run: python scripts/run-local-demo.py
       - name: Build container image
         run: docker build --tag opspilot-2:ci .
+
+  compose-runtime:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start Compose runtime and wait for health
+        run: docker compose up -d --build --wait
+      - name: Verify API and interrupted Job recovery dry-run
+        run: |
+          curl --fail --retry 5 --retry-connrefused http://127.0.0.1:8000/health
+          docker compose exec -T opspilot python -m app.job_recovery
+      - name: Clean up Compose resources
+        if: always()
+        run: docker compose down --volumes --remove-orphans

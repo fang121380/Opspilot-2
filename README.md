@@ -65,6 +65,7 @@ make run
 - received → investigating → awaiting_approval → executing → verifying → resolved 状态持久化。
 - 数据库原子执行权抢占、只读修复验证、防审批重放、运行时失败脱敏和未知写结果的保守停留策略。
 - Dockerfile、Docker Compose、Kind 演练清单、故障注入器和离线评测集。
+- GitHub CI 同时验证 Python 质量门禁与 Compose 运行时迁移、健康检查、恢复命令 dry-run。
 - Kind 中的专用 ServiceAccount 和最小 RBAC：没有 Secret、Shell、RBAC 修改或跨命名空间权限。
 - `make demo` 可以无 Docker 演示告警、调查、审批、执行和审计的完整 API 闭环。
 
