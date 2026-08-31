@@ -1,5 +1,7 @@
 # ADR-0015：版本化并安全接管关系型数据库结构
 
+English summary: Version migrations and adopt only known relational schemas without destructive guessing.
+
 ## 状态
 
 已接受

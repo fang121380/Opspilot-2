@@ -1,5 +1,7 @@
 # ADR-0009: Use the Kubernetes Python Client Directly
 
+中文摘要：直接使用类型化 Kubernetes 客户端，避免在 Agent 边界执行 kubectl Shell。
+
 ## Status
 
 Accepted
@@ -24,4 +26,3 @@ Trade-offs:
 
 - A real cluster or kubeconfig is required for integration tests.
 - Client lifecycle management must close the API client during application shutdown.
-

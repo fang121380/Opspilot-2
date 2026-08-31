@@ -6,7 +6,7 @@ English version: [Learning guide](learning-guide-en.md)
 
 ## 1. 先看事故边界
 
-阅读 [产品范围](product-scope.md) 和 [ADR-0001](adr/0001-mvp-boundary.md)。MVP 只处理一种完整场景：一次错误 Deployment 发布导致 HTTP 5xx 告警。
+阅读 [产品范围](product-scope-zh.md) 和 [ADR-0001](adr/0001-mvp-boundary-zh.md)。MVP 只处理一种完整场景：一次错误 Deployment 发布导致 HTTP 5xx 告警。
 
 这个限制是有意的。一个能跑完、能测试、能说明安全边界的生产型流程，比堆积很多未验证的集成更适合作为面试项目。
 

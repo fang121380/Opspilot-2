@@ -1,5 +1,7 @@
 # OpsPilot MVP Architecture
 
+中文版本：[架构说明](architecture-zh.md)；关键术语保留英文以便对照代码。
+
 ## Design principles
 
 1. **Read first, write last.** Diagnostics are read-only. Mutations are isolated behind policy and approval checks.

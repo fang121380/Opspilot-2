@@ -1,5 +1,7 @@
 # ADR-0012: Separate Proposal, Approval, and Execution APIs
 
+中文摘要：提案、审批和执行是三个独立操作，避免把建议误当成授权。
+
 ## Status
 
 Accepted

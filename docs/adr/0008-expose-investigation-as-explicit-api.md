@@ -1,5 +1,7 @@
 # ADR-0008: Expose Investigation as an Explicit API Operation
 
+中文摘要：告警接收与调查分为显式 API 操作，便于重试和处理部分失败。
+
 ## Status
 
 Accepted
@@ -24,4 +26,3 @@ Trade-offs:
 
 - The default application factory does not yet construct real Kubernetes and Prometheus clients.
 - A later job/queue layer is needed for long-running investigations.
-

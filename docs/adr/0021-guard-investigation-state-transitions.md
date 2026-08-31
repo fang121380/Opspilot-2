@@ -1,5 +1,7 @@
 # ADR-0021：保护调查状态迁移
 
+English summary: Guard investigation claims and final transitions so concurrent work cannot regress an incident.
+
 ## 背景
 
 同步调查、异步 Job、审批执行和验证可能在不同进程中并发访问同一事故。若调查入口使用无条件状态更新，较晚完成的调查能够把 `executing`、`verifying`、`resolved` 或 `closed` 事故回写为早期状态，破坏人工审批边界和审计时间线。

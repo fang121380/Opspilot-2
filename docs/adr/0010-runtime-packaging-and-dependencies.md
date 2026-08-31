@@ -1,5 +1,7 @@
 # ADR-0010: Separate Offline Development from Runtime Dependencies
 
+中文摘要：离线测试保持轻量，Docker Compose 单独提供 PostgreSQL、Prometheus 和运行时依赖。
+
 ## Status
 
 Accepted

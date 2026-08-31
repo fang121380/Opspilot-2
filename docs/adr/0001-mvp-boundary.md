@@ -1,5 +1,7 @@
 # ADR-0001: Constrain the First OpsPilot Release to One Incident Loop
 
+中文摘要：第一版只实现一条可测试、可审计的完整事故响应链路。
+
 ## Status
 
 Accepted
@@ -26,4 +28,3 @@ Trade-offs:
 
 - The MVP supports only one incident class and one mutating action.
 - Some integrations are intentionally represented by adapters rather than fully featured production clients.
-

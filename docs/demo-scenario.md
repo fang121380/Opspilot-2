@@ -1,5 +1,7 @@
 # MVP Demo Scenario: Deployment Regression
 
+中文版本：[演示场景](demo-scenario-zh.md)
+
 ## Setup
 
 - A Kind cluster contains the `checkout` service in the `demo` namespace.

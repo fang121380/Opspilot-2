@@ -1,5 +1,7 @@
 # ADR-0011: Expose Read-Only Diagnostics through MCP
 
+中文摘要：MCP 只暴露三个类型化诊断工具，不提供回滚、Shell 或任意 PromQL。
+
 ## Status
 
 Accepted
@@ -32,4 +34,3 @@ Trade-offs:
 
 - The server is not yet mounted into FastAPI's Streamable HTTP transport.
 - Authentication and per-caller authorization are deferred to the MCP gateway milestone.
-

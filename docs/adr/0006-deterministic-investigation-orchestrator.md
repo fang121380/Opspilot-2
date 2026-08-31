@@ -1,5 +1,7 @@
 # ADR-0006: Use a Deterministic Investigation Orchestrator Before LLM Autonomy
 
+中文摘要：在引入 LLM 自治前，先用固定顺序的调查编排建立可重放基线。
+
 ## Status
 
 Accepted
@@ -33,4 +35,3 @@ Trade-offs:
 
 - The first path supports only one known incident class.
 - Adaptive tool selection is deferred until evaluation data exists.
-

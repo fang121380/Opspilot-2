@@ -1,5 +1,7 @@
 # ADR-0017：认证 Alertmanager Webhook 来源
 
+English summary: Give Alertmanager a separate Bearer credential that cannot approve or execute remediation.
+
 ## 状态
 
 已接受

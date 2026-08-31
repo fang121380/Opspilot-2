@@ -1,5 +1,7 @@
 # ADR-0018：持久化调查 Job 快照
 
+English summary: Persist visible Job snapshots while keeping in-process execution explicitly non-durable.
+
 ## 状态
 
 已接受

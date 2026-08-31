@@ -1,5 +1,7 @@
 # ADR-0020：每个事故只允许一份活动修复提案
 
+English summary: Allow one active remediation proposal per incident and reject competing actions.
+
 ## 状态
 
 已接受

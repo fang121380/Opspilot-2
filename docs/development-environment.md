@@ -1,5 +1,7 @@
 # Opspilot 2 Development Environment
 
+中文版本：[开发环境](development-environment-zh.md)
+
 ## Verified on this machine
 
 - macOS 26.6.2 on Apple Silicon (`arm64`).

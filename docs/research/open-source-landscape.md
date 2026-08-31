@@ -1,5 +1,7 @@
 # Open-Source Landscape and Design Decisions
 
+中文版本：[开源项目调研](open-source-landscape-zh.md)
+
 This note records public projects studied for Opspilot 2. They are design references, not code sources. Opspilot 2 keeps its own scope, implementation, documentation, and tests.
 
 ## Projects reviewed
@@ -22,4 +24,3 @@ This note records public projects studied for Opspilot 2. They are design refere
 ## Deliberate differences
 
 Opspilot 2 does not claim autonomous production remediation. Its first release is approval-gated, single-cluster, and supports one controlled rollback scenario. This makes the safety model and test suite easier to inspect in an interview.
-

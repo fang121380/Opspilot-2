@@ -1,5 +1,7 @@
 # ADR-0019：原子去重活动调查 Job
 
+English summary: Enforce one queued or running investigation Job per incident across API replicas.
+
 ## 状态
 
 已接受

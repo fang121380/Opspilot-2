@@ -1,5 +1,7 @@
 # ADR-0014：用数据库比较并交换抢占修复执行权
 
+English summary: Use conditional database transitions to atomically claim remediation execution.
+
 ## 状态
 
 已接受

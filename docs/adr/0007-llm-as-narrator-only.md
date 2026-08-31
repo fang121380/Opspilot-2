@@ -1,5 +1,7 @@
 # ADR-0007: Treat the LLM as a Narrator, Not an Executor
 
+中文摘要：LLM 只生成说明文本，没有工具调用和修复权限。
+
 ## Status
 
 Accepted
@@ -26,4 +28,3 @@ Trade-offs:
 
 - The first integration does not support model-directed tool selection.
 - Prompt and output evaluation remain separate work; text quality is not treated as incident correctness.
-

@@ -1,5 +1,7 @@
 # ADR-0005: Correlate Audit Events with OpenTelemetry Trace IDs
 
+中文摘要：审计事件保存关联 ID，便于从事故时间线追溯到 Trace。
+
 ## Status
 
 Accepted
@@ -26,4 +28,3 @@ Trade-offs:
 
 - A local fallback ID is not a distributed trace and must not be presented as one in production dashboards.
 - Export configuration and sampling policy are deferred to the deployment milestone.
-

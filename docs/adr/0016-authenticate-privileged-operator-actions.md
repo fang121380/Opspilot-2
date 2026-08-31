@@ -1,5 +1,7 @@
 # ADR-0016：认证高权限操作员动作
 
+English summary: Authenticate approval and execution with a server-mapped operator identity.
+
 ## 状态
 
 已接受

@@ -1,5 +1,7 @@
 # OpsPilot MVP Product Scope
 
+中文版本：[产品范围](product-scope-zh.md)
+
 ## Product statement
 
 OpsPilot is a safety-first incident response service for Kubernetes workloads. It turns an operational alert into an evidence-backed diagnosis and a controlled remediation proposal. Any mutating action requires explicit human approval and is limited to an allowlisted operation.

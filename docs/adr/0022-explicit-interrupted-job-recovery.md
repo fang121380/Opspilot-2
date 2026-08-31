@@ -1,5 +1,7 @@
 # ADR-0022：显式恢复中断的调查 Job
 
+English summary: Recover confirmed interrupted Jobs explicitly, with dry-run by default and no automatic replay.
+
 ## 背景
 
 调查 Job 的可见快照已持久化，但实际执行仍是 API 进程内的 `asyncio` Task。进程异常退出会留下 `queued` 或 `running` 行并占用唯一的 `active_incident_id`，阻止后续调查。直接在任一 API 副本启动时把所有活动 Job 判为失败，会误伤其他仍在运行的副本。

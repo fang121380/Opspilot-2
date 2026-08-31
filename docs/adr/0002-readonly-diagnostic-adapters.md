@@ -1,5 +1,7 @@
 # ADR-0002: Keep First-Phase Diagnostic Adapters Read Only
 
+中文摘要：第一阶段诊断适配器只提供受限、类型化的只读能力。
+
 ## Status
 
 Accepted
@@ -26,4 +28,3 @@ Trade-offs:
 
 - Supporting a new query type requires intentional adapter work.
 - Prometheus range queries are deferred until the incident timeline needs them.
-

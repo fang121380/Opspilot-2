@@ -1,5 +1,7 @@
 # ADR-0003: Gate Remediation on Converging Evidence
 
+中文摘要：只有多来源证据收敛时，系统才提出修复建议。
+
 ## Status
 
 Accepted
@@ -30,4 +32,3 @@ Trade-offs:
 
 - This first rule can miss valid incidents where one telemetry source is unavailable.
 - Additional incident classes require new explicit rules or a carefully evaluated policy change.
-

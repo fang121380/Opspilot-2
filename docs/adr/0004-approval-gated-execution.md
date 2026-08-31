@@ -1,5 +1,7 @@
 # ADR-0004: Require Expiring Approval for Every Remediation
 
+中文摘要：每次修复都必须通过动作、范围、匹配和过期检查，并取得人工审批。
+
 ## Status
 
 Accepted

@@ -1,5 +1,7 @@
 # ADR-0013: Represent Long Investigations as Jobs
 
+中文摘要：长时间调查使用可轮询 Job 表示，后续可替换为持久化队列。
+
 ## Status
 
 Accepted

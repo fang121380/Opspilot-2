@@ -6,15 +6,17 @@ Project documentation is maintained in Chinese and English pairs. Chinese pages 
 
 | 主题 / Topic | 中文 / Chinese | English / 英文 |
 | --- | --- | --- |
-| 产品范围 / Product scope | [product-scope.md](product-scope.md) | [product-scope.md](product-scope.md) |
-| 架构 / Architecture | [architecture.md](architecture.md) | [architecture.md](architecture.md) |
+| 产品范围 / Product scope | [product-scope-zh.md](product-scope-zh.md) | [product-scope.md](product-scope.md) |
+| 架构 / Architecture | [architecture-zh.md](architecture-zh.md) | [architecture.md](architecture.md) |
 | 部署 / Deployment | [deployment-zh.md](deployment-zh.md) | [deployment-en.md](deployment-en.md) |
 | Kind 实机演练 / Kind drill | [kind-demo-zh.md](kind-demo-zh.md) | [kind-demo-en.md](kind-demo-en.md) |
 | 学习指南 / Learning guide | [learning-guide.md](learning-guide.md) | [learning-guide-en.md](learning-guide-en.md) |
 | 评测 / Evaluation | [evaluation-zh.md](evaluation-zh.md) | [evaluation-en.md](evaluation-en.md) |
 | 面试提纲 / Interview guide | [interview-zh.md](interview-zh.md) | [interview-en.md](interview-en.md) |
-| 演示场景 / Demo scenario | [demo-scenario.md](demo-scenario.md) | [demo-scenario.md](demo-scenario.md) |
-| ADR 决策记录 / ADRs | [adr/](adr/) | [adr/](adr/) |
+| 演示场景 / Demo scenario | [demo-scenario-zh.md](demo-scenario-zh.md) | [demo-scenario.md](demo-scenario.md) |
+| 开发环境 / Development environment | [development-environment-zh.md](development-environment-zh.md) | [development-environment.md](development-environment.md) |
+| 开源调研 / Open-source research | [research/open-source-landscape-zh.md](research/open-source-landscape-zh.md) | [research/open-source-landscape.md](research/open-source-landscape.md) |
+| ADR 决策记录 / ADRs | [adr/README-zh.md](adr/README-zh.md) | [adr/README.md](adr/README.md) |
 
 代码、API 路径、配置项和 Kubernetes 资源名统一使用英文工程命名；文档说明和操作步骤提供中英两种表述。
 
