@@ -1,5 +1,7 @@
 # Opspilot 2 面试讲解提纲
 
+English version: [Interview guide](interview-en.md)
+
 ## 一句话介绍
 
 Opspilot 2 是一个面向 Kubernetes 的安全优先事故响应平台：它接收告警、收集 Kubernetes/指标/日志证据、生成可解释的根因结论、提出回滚建议，并要求人工审批后才执行受限变更。

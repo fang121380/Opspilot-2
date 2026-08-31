@@ -1,5 +1,7 @@
 # Opspilot 2 学习指南
 
+English version: [Learning guide](learning-guide-en.md)
+
 建议按下面的顺序阅读项目。每一节都对应一个工程概念和一组可以运行的测试。
 
 ## 1. 先看事故边界

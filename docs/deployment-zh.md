@@ -1,5 +1,7 @@
 # Opspilot 2 部署说明
 
+English version: [Deployment guide](deployment-en.md)
+
 ## 本地 Python 模式
 
 这是当前开发和单元测试使用的模式。事故数据保存在内存中，适合离线学习和验证领域逻辑：

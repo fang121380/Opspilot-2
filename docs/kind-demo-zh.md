@@ -1,5 +1,7 @@
 # Opspilot 2 Kind 故障演练
 
+English version: [Kind incident drill](kind-demo-en.md)
+
 这套资产用于重现项目的主面试场景：`checkout` 服务从正常版本切换到持续返回 500 的错误版本。
 
 ## 前置条件

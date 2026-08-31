@@ -1,5 +1,7 @@
 # Opspilot 2 评测基线
 
+English version: [Evaluation baseline](evaluation-en.md)
+
 评测数据在 `evals/incidents.json`，当前包含四个固定样本：真实 Deployment 回归、健康服务、副本不足但缺少共同证据、以及含有误导性 `ERROR` 单词的普通 400 请求日志。
 
 运行：
@@ -14,4 +16,3 @@ make eval
 2. 任意一个证据缺失时，不得建议回滚。
 
 这不是 LLM 通用能力排行榜，而是 Opspilot 2 的安全回归基线。后续接入模型后，应分别记录“证据收集正确率”“根因判断正确率”和“危险动作误提议率”，不能只报告自然语言满意度。
-

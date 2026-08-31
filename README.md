@@ -28,7 +28,7 @@ Kubernetes AppsV1 回滚执行 + 审计和追踪
 只读指标验证 -> resolved 或保持 verifying
 ```
 
-文档入口：[产品范围](docs/product-scope.md)、[架构](docs/architecture.md)、[演示场景](docs/demo-scenario.md)、[部署说明](docs/deployment-zh.md)、[Kind 故障演练](docs/kind-demo-zh.md)、[中文学习指南](docs/learning-guide.md)、[评测基线](docs/evaluation-zh.md)、[面试讲解提纲](docs/interview-zh.md)、[ADR](docs/adr/) 和 [开源项目调研](docs/research/open-source-landscape.md)。
+文档入口 / Documentation: [双语索引 / Bilingual index](docs/README.md)、[产品范围 / Product scope](docs/product-scope.md)、[架构 / Architecture](docs/architecture.md)、[演示场景 / Demo scenario](docs/demo-scenario.md)、[部署说明（中文）](docs/deployment-zh.md) / [Deployment (EN)](docs/deployment-en.md)、[Kind 故障演练（中文）](docs/kind-demo-zh.md) / [Kind drill (EN)](docs/kind-demo-en.md)、[学习指南（中文）](docs/learning-guide.md) / [Learning guide (EN)](docs/learning-guide-en.md)、[评测基线（中文）](docs/evaluation-zh.md) / [Evaluation (EN)](docs/evaluation-en.md)、[面试讲解提纲（中文）](docs/interview-zh.md) / [Interview guide (EN)](docs/interview-en.md)、[ADR](docs/adr/) 和 [开源项目调研 / Open-source research](docs/research/open-source-landscape.md)。
 
 ## 本地开发
 
