@@ -390,6 +390,46 @@ class SqlAlchemyStore:
                 return None
             return self._to_job(row)
 
+    def list_active_jobs(self) -> list[InvestigationJob]:
+        with self._sessions() as session:
+            rows = session.scalars(
+                select(InvestigationJobRow)
+                .where(
+                    InvestigationJobRow.status.in_(
+                        [JobStatus.QUEUED.value, JobStatus.RUNNING.value]
+                    )
+                )
+                .order_by(InvestigationJobRow.created_at, InvestigationJobRow.id)
+            ).all()
+            return [self._to_job(row) for row in rows]
+
+    def fail_active_job(self, job_id: UUID, error: str) -> InvestigationJob | None:
+        """Atomically release an interrupted queued/running job."""
+
+        with self._sessions.begin() as session:
+            result = session.execute(
+                update(InvestigationJobRow)
+                .where(
+                    InvestigationJobRow.id == str(job_id),
+                    InvestigationJobRow.status.in_(
+                        [JobStatus.QUEUED.value, JobStatus.RUNNING.value]
+                    ),
+                )
+                .values(
+                    status=JobStatus.FAILED.value,
+                    active_incident_id=None,
+                    error=error,
+                    finished_at=datetime.now(UTC),
+                )
+                .execution_options(synchronize_session=False)
+            )
+            if result.rowcount == 0:
+                return None
+            row = session.get(InvestigationJobRow, str(job_id))
+            if row is None:  # pragma: no cover - protected by the successful update
+                raise KeyError(str(job_id))
+            return self._to_job(row)
+
     @staticmethod
     def _incident_row(incident: Incident) -> IncidentRow:
         return IncidentRow(

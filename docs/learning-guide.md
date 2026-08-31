@@ -91,7 +91,7 @@ Kubernetes 或 Prometheus 调查失败时，同步接口返回经过清理的 HT
 
 长调查通过 `POST /incidents/{incident_id}/investigate/jobs` 返回 Job ID，再用 `GET /investigation/jobs/{job_id}` 查询状态。应用成功装配 Kubernetes 和 Prometheus 调查依赖时会自动创建任务管理器；任务先原子抢占 `received -> investigating`，再在有建议时推进到 `awaiting_approval`，无建议时回到 `received`。若任务尚未开始就发现事故已被别的流程抢占，它以 `StateConflict` 失败且不会执行任何调查或覆盖状态。其他失败任务只暴露异常类型，并写入带 Job ID 的 `diagnostic.failed` 审计事件，不泄露上游错误正文。
 
-任务执行仍由当前进程的 `asyncio` Task 完成，但 Job 的每次可见快照通过 Repository 保存；SQL 模式会持久化 queued/running/succeeded/failed、脱敏错误和结构化分析结果，API 重启后仍可查询已完成任务。`active_incident_id` 的可空唯一约束保证一个事故最多有一个 queued/running Job；并发请求的竞争失败方回读同一 Job ID，任务结束后释放占用，后续可以重新调查。状态抢占与最终迁移均使用条件更新，避免异步任务把执行中、验证中或终态事故回写为早期状态。进程崩溃时正在运行的协程不会自动恢复，生产环境仍需 Redis/消息队列、租约和 worker 重试语义；持久化元数据不能被夸大成持久化执行。设计见 [ADR-0018](adr/0018-persist-investigation-job-snapshots.md)、[ADR-0019](adr/0019-deduplicate-active-investigation-jobs.md) 和 [ADR-0021](adr/0021-guard-investigation-state-transitions.md)。
+任务执行仍由当前进程的 `asyncio` Task 完成，但 Job 的每次可见快照通过 Repository 保存；SQL 模式会持久化 queued/running/succeeded/failed、脱敏错误和结构化分析结果，API 重启后仍可查询已完成任务。`active_incident_id` 的可空唯一约束保证一个事故最多有一个 queued/running Job；并发请求的竞争失败方回读同一 Job ID，任务结束后释放占用，后续可以重新调查。状态抢占与最终迁移均使用条件更新，避免异步任务把执行中、验证中或终态事故回写为早期状态。进程崩溃时正在运行的协程不会自动恢复；项目提供默认 dry-run 的 `python -m app.job_recovery` 维护命令，只有在所有 API/worker 停止并传入 `--confirm` 后，才把遗留 Job 标记为 `ProcessRestarted` 并条件性释放事故。它不是自动重试或持久化执行器。生产环境仍需 Redis/消息队列、租约和 worker 重试语义；持久化元数据不能被夸大成持久化执行。设计见 [ADR-0018](adr/0018-persist-investigation-job-snapshots.md)、[ADR-0019](adr/0019-deduplicate-active-investigation-jobs.md)、[ADR-0021](adr/0021-guard-investigation-state-transitions.md) 和 [ADR-0022](adr/0022-explicit-interrupted-job-recovery.md)。
 
 ## 10. 理解部署边界
 

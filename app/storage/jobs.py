@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from threading import RLock
 from typing import Protocol
 from uuid import UUID
@@ -15,6 +16,10 @@ class InvestigationJobRepository(Protocol):
     def update_job(self, job: InvestigationJob) -> InvestigationJob: ...
 
     def get_job(self, job_id: UUID) -> InvestigationJob | None: ...
+
+    def list_active_jobs(self) -> list[InvestigationJob]: ...
+
+    def fail_active_job(self, job_id: UUID, error: str) -> InvestigationJob | None: ...
 
 
 class InMemoryInvestigationJobRepository:
@@ -50,3 +55,23 @@ class InMemoryInvestigationJobRepository:
         with self._lock:
             job = self._jobs.get(job_id)
             return job.model_copy(deep=True) if job is not None else None
+
+    def list_active_jobs(self) -> list[InvestigationJob]:
+        with self._lock:
+            return [
+                job.model_copy(deep=True)
+                for job in self._jobs.values()
+                if job.status in {JobStatus.QUEUED, JobStatus.RUNNING}
+            ]
+
+    def fail_active_job(self, job_id: UUID, error: str) -> InvestigationJob | None:
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None or job.status not in {JobStatus.QUEUED, JobStatus.RUNNING}:
+                return None
+            job.status = JobStatus.FAILED
+            job.error = error
+            job.finished_at = datetime.now(UTC)
+            if self._active_by_incident.get(job.incident_id) == job.id:
+                self._active_by_incident.pop(job.incident_id, None)
+            return job.model_copy(deep=True)

@@ -39,6 +39,23 @@ alembic current
 
 迁移入口只自动接管三种可证明的状态：空数据库、`0001` 旧版完整结构、当前完整但尚无 Alembic 标记的开发结构。缺表、约束不匹配或未知结构会直接失败，不会删表、删卷或猜测修复。版本链当前为 `0001_initial_schema -> 0002_active_fingerprint -> 0003_persist_investigation_jobs -> 0004_deduplicate_active_jobs -> 0005_unique_proposals`；Compose 现有命名卷会无损升级，事故和既有审批数据保留。若 `0004` 发现同一事故已有多个 queued/running Job，或 `0005` 发现同一事故已有多个提案，会拒绝猜测保留哪一个，要求操作员先核对处理。生产环境不建议执行破坏性降级。
 
+## 中断调查 Job 恢复
+
+`asyncio` Job 不会在进程崩溃后自动续跑。为避免把单个 API 副本重启误判为全局任务中断，应用启动时不会自动修改共享 Job 状态。维护者应先停止所有 API/worker，备份数据库，再使用默认 dry-run 查看候选任务：
+
+```bash
+export OPSPILOT_DATABASE_URL='postgresql+psycopg://...'
+make recover-jobs
+```
+
+确认候选项确实来自已中断的进程后，显式执行：
+
+```bash
+.venv/bin/python -m app.job_recovery --confirm
+```
+
+命令仅将当时仍为 `queued`/`running` 的 Job 条件性标记为 `failed`，错误类型为 `ProcessRestarted`，释放 `active_incident_id`；若关联事故仍是 `investigating` 才条件性退回 `received`。它不启动新协程、不重放诊断、不调用 Kubernetes，也不会覆盖已进入执行、验证或终态的事故。完整生产队列仍需要 worker 租约、心跳和超时回收。
+
 ## Kubernetes/Kind 模式
 
 Kind 演练清单在 `infra/kind/`，脚本说明见 [Kind 故障演练](kind-demo-zh.md)。当前演练验证服务故障、Prometheus 告警、Alertmanager Webhook 和真实 Kubernetes 调查。Kubernetes readinessProbe 使用 `/ready`，livenessProbe 使用 `/health`，避免外部依赖装配失败时仍把 Pod 标记为可接流量。

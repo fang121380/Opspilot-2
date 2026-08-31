@@ -1,7 +1,7 @@
 PYTHON ?= .venv/bin/python
 PIP ?= .venv/bin/pip
 
-.PHONY: setup test coverage eval demo lint format migrate run
+.PHONY: setup test coverage eval demo lint format migrate recover-jobs run
 
 setup:
 	$(PYTHON) -m pip install --upgrade pip
@@ -27,6 +27,9 @@ format:
 
 migrate:
 	$(PYTHON) -m app.migrate
+
+recover-jobs:
+	$(PYTHON) -m app.job_recovery
 
 run:
 	$(PYTHON) -m uvicorn app.main:app --reload
