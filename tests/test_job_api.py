@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.agent.analysis import AnalysisOutcome
 from app.agent.jobs import InvestigationJobManager
-from app.domain.incidents import Incident
+from app.domain.incidents import Incident, IncidentStatus
 from app.main import create_app
 from app.storage.incidents import IncidentRepository
 
@@ -65,6 +65,28 @@ def test_job_api_rejects_unknown_job() -> None:
     response = client.get(f"/investigation/jobs/{uuid4()}")
 
     assert response.status_code == 404
+
+
+def test_job_api_rejects_incident_after_investigation_stage() -> None:
+    repository = IncidentRepository()
+    incident = Incident(
+        status=IncidentStatus.AWAITING_APPROVAL,
+        alert_name="HighErrorRate",
+        alert_fingerprint="late-job-api-test",
+        service="checkout",
+        namespace="demo",
+        started_at=datetime(2026, 8, 28, tzinfo=UTC),
+    )
+    repository.create_or_get_active(incident)
+    manager = InvestigationJobManager(FakeInvestigator(), repository)
+    client = TestClient(
+        create_app(incident_repository=repository, job_manager=manager)
+    )
+
+    response = client.post(f"/incidents/{incident.id}/investigate/jobs")
+
+    assert response.status_code == 409
+    assert repository.get(str(incident.id)).status == IncidentStatus.AWAITING_APPROVAL
 
 
 def test_job_api_reopens_persisted_completed_job(tmp_path: Path) -> None:

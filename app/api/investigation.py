@@ -58,8 +58,19 @@ async def investigate_incident(
     incident = repository.get(str(incident_id))
     if incident is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="incident not found")
+    if incident.status != IncidentStatus.RECEIVED:
+        raise HTTPException(
+            status_code=409,
+            detail=f"incident cannot be investigated from status {incident.status.value}",
+        )
 
-    incident = repository.update_status(str(incident_id), IncidentStatus.INVESTIGATING)
+    incident = repository.transition_status(
+        str(incident_id),
+        expected=IncidentStatus.RECEIVED,
+        target=IncidentStatus.INVESTIGATING,
+    )
+    if incident is None:
+        raise HTTPException(status_code=409, detail="incident status changed; retry request")
     INVESTIGATIONS_STARTED.inc()
     try:
         analysis = await investigator.investigate(incident)
@@ -70,12 +81,39 @@ async def investigate_incident(
             incident_id=incident.id,
             payload={"error_type": type(error).__name__},
         )
+        repository.transition_status(
+            str(incident_id),
+            expected=IncidentStatus.INVESTIGATING,
+            target=IncidentStatus.RECEIVED,
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="incident investigation failed",
         ) from error
     if analysis.recommended_actions:
-        incident = repository.update_status(str(incident_id), IncidentStatus.AWAITING_APPROVAL)
+        transitioned = repository.transition_status(
+            str(incident_id),
+            expected=IncidentStatus.INVESTIGATING,
+            target=IncidentStatus.AWAITING_APPROVAL,
+        )
+        if transitioned is None:
+            raise HTTPException(
+                status_code=409,
+                detail="incident status changed during investigation",
+            )
+        incident = transitioned
+    else:
+        transitioned = repository.transition_status(
+            str(incident_id),
+            expected=IncidentStatus.INVESTIGATING,
+            target=IncidentStatus.RECEIVED,
+        )
+        if transitioned is None:
+            raise HTTPException(
+                status_code=409,
+                detail="incident status changed during investigation",
+            )
+        incident = transitioned
     INVESTIGATION_OUTCOMES.labels(
         outcome="recommended" if analysis.recommended_actions else "no_action"
     ).inc()

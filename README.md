@@ -42,7 +42,7 @@ make demo
 make run
 ```
 
-健康检查：`http://127.0.0.1:8000/health`。OpenAPI：`http://127.0.0.1:8000/docs`。Prometheus 指标：`http://127.0.0.1:8000/metrics`。
+默认健康检查：`http://127.0.0.1:8000/health`。OpenAPI：`http://127.0.0.1:8000/docs`。Prometheus 指标：`http://127.0.0.1:8000/metrics`。Compose 可通过 `OPSPILOT_HOST_PORT` 改用未占用的宿主机端口。
 
 ## 已完成能力
 
@@ -70,8 +70,8 @@ make run
 ## 当前验证
 
 ```text
-110 个单元/集成测试通过
-代码覆盖率 91.14%
+116 个单元/集成测试通过
+代码覆盖率 91.21%
 Ruff 静态检查通过
 离线评测 4/4 通过
 kubectl v1.37.0 和 kind v0.33.0 已验证

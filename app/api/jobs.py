@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.agent.jobs import InvestigationJob, InvestigationJobManager
+from app.domain.incidents import IncidentStatus
 from app.storage.incidents import IncidentRepository
 
 router = APIRouter(tags=["jobs"])
@@ -40,6 +41,11 @@ async def enqueue_investigation(
     incident = repository.get(str(incident_id))
     if incident is None:
         raise HTTPException(status_code=404, detail="incident not found")
+    if incident.status not in {IncidentStatus.RECEIVED, IncidentStatus.INVESTIGATING}:
+        raise HTTPException(
+            status_code=409,
+            detail=f"incident cannot be investigated from status {incident.status.value}",
+        )
     return manager.enqueue(incident)
 
 

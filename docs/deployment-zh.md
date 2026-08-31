@@ -21,7 +21,7 @@ curl http://127.0.0.1:8000/health
 
 Compose 会等待 PostgreSQL 健康，执行 `python -m app.migrate` 升级数据库，再启动 API；迁移失败时 API 不会带着未知结构继续运行。`GET /health` 是无依赖的进程存活检查；`GET /ready` 只有在调查、异步任务、审批执行器和只读验证器全部装配后才返回 200。Compose 用于验证持久化和指标抓取，不挂载宿主机 Kubernetes 凭据，因此调查接口会返回明确 503，不会返回伪造数据。
 
-Prometheus 配置会在构建时写入无隐式数据卷的专用镜像，避免 Docker Desktop 对单文件绑定挂载和匿名卷的兼容性问题。Prometheus 仅在 Compose 内部网络开放 `9090`，宿主机只暴露 Opspilot API 的 `8000`；此模式不保留本地 Prometheus 时序数据，事故、审批和审计数据仍由 PostgreSQL 命名卷持久化。
+Prometheus 配置会在构建时写入无隐式数据卷的专用镜像，避免 Docker Desktop 对单文件绑定挂载和匿名卷的兼容性问题。Prometheus 仅在 Compose 内部网络开放 `9090`，宿主机默认暴露 Opspilot API 的 `8000`；此模式不保留本地 Prometheus 时序数据，事故、审批和审计数据仍由 PostgreSQL 命名卷持久化。若端口已被其他本地实例占用，可运行 `OPSPILOT_HOST_PORT=8001 docker compose up --build`，然后访问 `http://127.0.0.1:8001/health`。
 
 默认连接信息仅用于本地演示，不能用于生产环境。生产部署必须通过 Secret 管理数据库密码，并替换镜像标签、网络策略、RBAC 和备份策略。
 
@@ -48,6 +48,7 @@ Kind 演练清单在 `infra/kind/`，脚本说明见 [Kind 故障演练](kind-de
 | 环境变量 | 用途 | 默认值 |
 | --- | --- | --- |
 | `OPSPILOT_ENVIRONMENT` | 运行环境标识 | `development` |
+| `OPSPILOT_HOST_PORT` | Compose 暴露给宿主机的 API 端口 | `8000` |
 | `OPSPILOT_DATABASE_URL` | SQLAlchemy PostgreSQL 连接串 | 未设置，使用内存存储 |
 | `OPSPILOT_PROMETHEUS_URL` | Prometheus 地址 | 未设置 |
 | `OPSPILOT_OPERATOR_ID` | 可信审批操作员身份 | 未设置，审批和执行关闭 |

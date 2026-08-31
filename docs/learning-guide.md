@@ -81,7 +81,7 @@ Kubernetes 写调用抛出异常时，系统不能判断请求是否已被集群
 
 调查编排器按固定顺序读取 Deployment、Pod、日志和 Prometheus 指标，然后调用确定性分析器。诊断完成和分析完成分别写入审计事件，因此可以区分“外部数据没拿到”和“分析规则没有命中”。
 
-Kubernetes 或 Prometheus 调查失败时，同步接口返回经过清理的 HTTP 503，并记录只包含异常类型的 `diagnostic.failed` 事件；不会把上游 URL、响应正文或凭据细节回传给调用方。事故保持 `investigating`，等待依赖恢复或人工处理。
+Kubernetes 或 Prometheus 调查失败时，同步接口返回经过清理的 HTTP 503，并记录只包含异常类型的 `diagnostic.failed` 事件；不会把上游 URL、响应正文或凭据细节回传给调用方。失败会由原子比较并交换把事故从 `investigating` 退回 `received`，从而允许依赖恢复后由操作员重新发起调查；若期间已有其他流程接管状态，清理操作不会覆盖它。
 
 这里的核心概念是**可重放基线**：在加入 LLM 的自适应工具调用之前，先让同一事故每次都走同一条可测试路径。
 
@@ -89,9 +89,9 @@ Kubernetes 或 Prometheus 调查失败时，同步接口返回经过清理的 HT
 
 阅读 `app/agent/jobs.py`、`app/api/jobs.py` 和 [ADR-0013](adr/0013-async-investigation-jobs.md)。
 
-长调查通过 `POST /incidents/{incident_id}/investigate/jobs` 返回 Job ID，再用 `GET /investigation/jobs/{job_id}` 查询状态。应用成功装配 Kubernetes 和 Prometheus 调查依赖时会自动创建任务管理器；异步调查同样推进 `investigating` 和 `awaiting_approval` 事故状态。失败任务只暴露异常类型，并写入带 Job ID 的 `diagnostic.failed` 审计事件，不泄露上游错误正文。
+长调查通过 `POST /incidents/{incident_id}/investigate/jobs` 返回 Job ID，再用 `GET /investigation/jobs/{job_id}` 查询状态。应用成功装配 Kubernetes 和 Prometheus 调查依赖时会自动创建任务管理器；任务先原子抢占 `received -> investigating`，再在有建议时推进到 `awaiting_approval`，无建议时回到 `received`。若任务尚未开始就发现事故已被别的流程抢占，它以 `StateConflict` 失败且不会执行任何调查或覆盖状态。其他失败任务只暴露异常类型，并写入带 Job ID 的 `diagnostic.failed` 审计事件，不泄露上游错误正文。
 
-任务执行仍由当前进程的 `asyncio` Task 完成，但 Job 的每次可见快照通过 Repository 保存；SQL 模式会持久化 queued/running/succeeded/failed、脱敏错误和结构化分析结果，API 重启后仍可查询已完成任务。`active_incident_id` 的可空唯一约束保证一个事故最多有一个 queued/running Job；并发请求的竞争失败方回读同一 Job ID，任务结束后释放占用，后续可以重新调查。进程崩溃时正在运行的协程不会自动恢复，生产环境仍需 Redis/消息队列、租约和 worker 重试语义；持久化元数据不能被夸大成持久化执行。设计见 [ADR-0018](adr/0018-persist-investigation-job-snapshots.md) 和 [ADR-0019](adr/0019-deduplicate-active-investigation-jobs.md)。
+任务执行仍由当前进程的 `asyncio` Task 完成，但 Job 的每次可见快照通过 Repository 保存；SQL 模式会持久化 queued/running/succeeded/failed、脱敏错误和结构化分析结果，API 重启后仍可查询已完成任务。`active_incident_id` 的可空唯一约束保证一个事故最多有一个 queued/running Job；并发请求的竞争失败方回读同一 Job ID，任务结束后释放占用，后续可以重新调查。状态抢占与最终迁移均使用条件更新，避免异步任务把执行中、验证中或终态事故回写为早期状态。进程崩溃时正在运行的协程不会自动恢复，生产环境仍需 Redis/消息队列、租约和 worker 重试语义；持久化元数据不能被夸大成持久化执行。设计见 [ADR-0018](adr/0018-persist-investigation-job-snapshots.md)、[ADR-0019](adr/0019-deduplicate-active-investigation-jobs.md) 和 [ADR-0021](adr/0021-guard-investigation-state-transitions.md)。
 
 ## 10. 理解部署边界
 

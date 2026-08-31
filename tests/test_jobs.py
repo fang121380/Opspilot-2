@@ -165,3 +165,70 @@ async def test_job_manager_sanitizes_and_audits_investigation_failure() -> None:
         "error_type": "RuntimeError",
         "job_id": str(queued.id),
     }
+    assert repository.get(str(incident.id)).status == IncidentStatus.RECEIVED
+
+
+@pytest.mark.asyncio
+async def test_job_manager_does_not_investigate_when_state_is_already_claimed() -> None:
+    class UnexpectedInvestigator:
+        async def investigate(self, incident: Incident) -> AnalysisOutcome:
+            raise AssertionError("a state-conflicted job must not investigate")
+
+    incident = Incident(
+        status=IncidentStatus.INVESTIGATING,
+        alert_name="HighErrorRate",
+        alert_fingerprint="job-state-conflict-test",
+        service="checkout",
+        namespace="demo",
+        started_at=datetime(2026, 8, 28, tzinfo=UTC),
+    )
+    repository = IncidentRepository()
+    repository.create_or_get_active(incident)
+    manager = InvestigationJobManager(UnexpectedInvestigator(), repository)
+
+    queued = manager.enqueue(incident)
+    for _ in range(20):
+        await asyncio.sleep(0)
+        current = manager.get(queued.id)
+        if current and current.status == JobStatus.FAILED:
+            break
+
+    assert current is not None
+    assert current.status == JobStatus.FAILED
+    assert current.error == "StateConflict"
+    assert repository.get(str(incident.id)).status == IncidentStatus.INVESTIGATING
+
+
+@pytest.mark.asyncio
+async def test_job_manager_does_not_overwrite_state_changed_during_investigation() -> None:
+    incident = Incident(
+        alert_name="HighErrorRate",
+        alert_fingerprint="job-final-state-conflict-test",
+        service="checkout",
+        namespace="demo",
+        started_at=datetime(2026, 8, 28, tzinfo=UTC),
+    )
+    repository = IncidentRepository()
+    repository.create_or_get_active(incident)
+
+    class StateChangingInvestigator:
+        async def investigate(self, incident: Incident) -> AnalysisOutcome:
+            repository.transition_status(
+                str(incident.id),
+                expected=IncidentStatus.INVESTIGATING,
+                target=IncidentStatus.EXECUTING,
+            )
+            return AnalysisOutcome(summary="done", impact="none", confidence=0.9)
+
+    manager = InvestigationJobManager(StateChangingInvestigator(), repository)
+    queued = manager.enqueue(incident)
+    for _ in range(20):
+        await asyncio.sleep(0)
+        current = manager.get(queued.id)
+        if current and current.status == JobStatus.FAILED:
+            break
+
+    assert current is not None
+    assert current.status == JobStatus.FAILED
+    assert current.error == "StateConflict"
+    assert repository.get(str(incident.id)).status == IncidentStatus.EXECUTING

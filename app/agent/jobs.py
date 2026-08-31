@@ -21,7 +21,13 @@ class Investigator(Protocol):
 
 
 class IncidentStatusRepository(Protocol):
-    def update_status(self, incident_id: str, status: IncidentStatus) -> Incident: ...
+    def transition_status(
+        self,
+        incident_id: str,
+        *,
+        expected: IncidentStatus,
+        target: IncidentStatus,
+    ) -> Incident | None: ...
 
 
 class AuditRepository(Protocol):
@@ -56,29 +62,71 @@ class InvestigationJobManager:
     async def _run(self, job: InvestigationJob, incident: Incident) -> None:
         job.status = JobStatus.RUNNING
         self._job_repository.update_job(job)
-        self._update_incident(incident.id, IncidentStatus.INVESTIGATING)
+        claimed = self._transition_incident(
+            incident.id,
+            expected=IncidentStatus.RECEIVED,
+            target=IncidentStatus.INVESTIGATING,
+        )
+        if not claimed:
+            self._fail_job(job, incident, "StateConflict")
+            job.finished_at = datetime.now(UTC)
+            self._job_repository.update_job(job)
+            return
         try:
             job.analysis = await self._investigator.investigate(incident)
+            if job.analysis.recommended_actions:
+                transitioned = self._transition_incident(
+                    incident.id,
+                    expected=IncidentStatus.INVESTIGATING,
+                    target=IncidentStatus.AWAITING_APPROVAL,
+                )
+            else:
+                transitioned = self._transition_incident(
+                    incident.id,
+                    expected=IncidentStatus.INVESTIGATING,
+                    target=IncidentStatus.RECEIVED,
+                )
+            if not transitioned:
+                self._fail_job(job, incident, "StateConflict")
+                return
             job.status = JobStatus.SUCCEEDED
             INVESTIGATION_OUTCOMES.labels(
                 outcome="recommended" if job.analysis.recommended_actions else "no_action"
             ).inc()
-            if job.analysis.recommended_actions:
-                self._update_incident(incident.id, IncidentStatus.AWAITING_APPROVAL)
         except Exception as error:  # noqa: BLE001 - job boundary records failures
-            job.status = JobStatus.FAILED
-            job.error = type(error).__name__
-            INVESTIGATION_OUTCOMES.labels(outcome="failed").inc()
-            if self._audit_repository is not None:
-                self._audit_repository.append(
-                    event_type=AuditEventType.DIAGNOSTIC_FAILED,
-                    incident_id=incident.id,
-                    payload={"error_type": job.error, "job_id": str(job.id)},
-                )
+            self._fail_job(job, incident, type(error).__name__)
+            self._transition_incident(
+                incident.id,
+                expected=IncidentStatus.INVESTIGATING,
+                target=IncidentStatus.RECEIVED,
+            )
         finally:
             job.finished_at = datetime.now(UTC)
             self._job_repository.update_job(job)
 
-    def _update_incident(self, incident_id: UUID, status: IncidentStatus) -> None:
-        if self._incident_repository is not None:
-            self._incident_repository.update_status(str(incident_id), status)
+    def _transition_incident(
+        self,
+        incident_id: UUID,
+        *,
+        expected: IncidentStatus,
+        target: IncidentStatus,
+    ) -> bool:
+        if self._incident_repository is None:
+            return True
+        return (
+            self._incident_repository.transition_status(
+                str(incident_id), expected=expected, target=target
+            )
+            is not None
+        )
+
+    def _fail_job(self, job: InvestigationJob, incident: Incident, error: str) -> None:
+        job.status = JobStatus.FAILED
+        job.error = error
+        INVESTIGATION_OUTCOMES.labels(outcome="failed").inc()
+        if self._audit_repository is not None:
+            self._audit_repository.append(
+                event_type=AuditEventType.DIAGNOSTIC_FAILED,
+                incident_id=incident.id,
+                payload={"error_type": error, "job_id": str(job.id)},
+            )
