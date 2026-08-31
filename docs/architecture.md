@@ -64,12 +64,13 @@ app/
 
 ```text
 received -> investigating -> awaiting_approval -> executing -> verifying -> resolved
-                              ^                    |
-                              |____________________|
-                           rejected approval
+    ^             |
+    |             +-- no recommendation / failure
+    |                   (conditional transition only)
+    +-- a later, explicit investigation request
 ```
 
-The API persists each transition in both the in-memory repository and SQLAlchemy store. A rejected, missing, mismatched, or expired approval cannot advance the incident to a mutating state.
+Only a `received` incident can be claimed for investigation. Both the initial claim and the final investigation transition use conditional updates, so a delayed synchronous request or asynchronous Job cannot overwrite an executing, verifying, or terminal incident. A rejected, missing, mismatched, or expired approval cannot advance the incident to a mutating state.
 The executor atomically claims `awaiting_approval -> executing` with a conditional database update before calling Kubernetes. Shared-PostgreSQL API replicas therefore cannot execute the same incident concurrently. Once an incident reaches `executing`, `verifying`, or a terminal state, creating another proposal cannot reset it to `awaiting_approval`.
 
 ## Initial technology choices
