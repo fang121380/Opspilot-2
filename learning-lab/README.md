@@ -59,6 +59,10 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. The UI currently uses local mock data and provides official docs, self-check feedback, and read-only command exercises. See [INTEGRATION_PLAN.md](INTEGRATION_PLAN.md) for the Opspilot integration boundary.
 
+Windows 用户可直接使用 [Windows 一键部署 / Windows one-click deployment](windows/README.md)，其中的 `Install-All.ps1` 会安装全部工具并启动学习集群。
+
+Windows users can follow [windows/README.md](windows/README.md). `Install-All.ps1` installs the required tools and `Start-LearningLab.ps1` creates the lab cluster and starts the workbench.
+
 ## 学习节奏 / Suggested cadence
 
 每次只完成一个实验：先读目标，再执行命令，最后完成验收清单。遇到错误时先记录 `kubectl get pods -A`、`kubectl describe` 和相关日志，再尝试修复。

@@ -48,6 +48,8 @@ make run
 
 Follow the Docker -> Kind -> Kubernetes -> troubleshooting path in [`learning-lab/`](learning-lab/README.md). Run `make -C learning-lab check` then `make -C learning-lab up`. It uses an isolated `k8s-lab` cluster and never changes `opspilot-2`.
 
+Windows 部署见 [`learning-lab/windows/README.md`](learning-lab/windows/README.md)，执行 `Install-All.ps1` 可一键安装所需工具。
+
 默认健康检查：`http://127.0.0.1:8000/health`。OpenAPI：`http://127.0.0.1:8000/docs`。Prometheus 指标：`http://127.0.0.1:8000/metrics`。Compose 可通过 `OPSPILOT_HOST_PORT` 改用未占用的宿主机端口。
 
 ## 已完成能力
