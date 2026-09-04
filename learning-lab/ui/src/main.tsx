@@ -15,6 +15,7 @@ import {
   GitBranch,
   Layers3,
   Play,
+  PlugZap,
   RotateCcw,
   Server,
   ShieldCheck,
@@ -25,6 +26,8 @@ import "./styles.css";
 
 type Lab = { id: string; title: string; subtitle: string; duration: string; state: "done" | "active" | "locked" };
 type Resource = { kind: string; name: string; status: string; detail: string; tone: "good" | "warn" | "muted" };
+type ConnectionState = "mock" | "connecting" | "live" | "error";
+type LabApiResponse = { query: string; ok: boolean; output?: string; error?: string };
 
 const labs: Lab[] = [
   { id: "00", title: "环境检查", subtitle: "Docker、kubectl、Kind", duration: "10 分钟", state: "done" },
@@ -67,6 +70,7 @@ function App() {
   const [resources, setResources] = useState(baseResources);
   const [showGuide, setShowGuide] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
+  const [connection, setConnection] = useState<ConnectionState>("mock");
   const [command, setCommand] = useState(commands[0]);
   const [terminalLines, setTerminalLines] = useState<string[]>([
     "$ kubectl config current-context",
@@ -77,6 +81,28 @@ function App() {
   const [notice, setNotice] = useState("学习集群正在等待镜像就绪");
   const selected = labs.find((lab) => lab.id === selectedLab) ?? labs[2];
   const readyCount = useMemo(() => resources.filter((item) => item.tone === "good").length, [resources]);
+
+  const connectLive = async () => {
+    setConnection("connecting");
+    try {
+      const response = await fetch(`${import.meta.env.VITE_LAB_API_URL ?? "http://127.0.0.1:8787"}/?query=resources`);
+      const payload = (await response.json()) as LabApiResponse;
+      if (!response.ok || !payload.ok || !payload.output) throw new Error(payload.error ?? "lab-api unavailable");
+      const ready = /deployment\.apps\/hello-web\s+2\/2\s+2\s+2/.test(payload.output);
+      setResources((items) => items.map((item) => {
+        if (item.kind === "Service") return { ...item, status: "ClusterIP", detail: "read from k8s-lab · port 80", tone: "good" };
+        if (ready) return { ...item, status: item.kind === "Deployment" ? "Available" : "Running", detail: item.kind === "Deployment" ? "2/2 available · read from k8s-lab" : "Running · read from k8s-lab", tone: "good" };
+        return item;
+      }));
+      setConnection("live");
+      setNotice("已连接 k8s-lab，只读状态已更新");
+    } catch {
+      setConnection("error");
+      setNotice("无法连接只读 API：保持模拟数据，可运行 make -C learning-lab api 后重试");
+    }
+  };
+
+  const connectionLabel = connection === "connecting" ? "连接中" : connection === "live" ? "实机只读" : connection === "error" ? "连接失败" : "本地模拟";
 
   const runCommand = () => {
     const output = command === commands[0]
@@ -106,7 +132,7 @@ function App() {
       <header className="topbar">
         <div className="brand"><div className="brand-mark"><Layers3 size={17} /></div><div><strong>Opspilot</strong><span>学习工作台</span></div></div>
         <div className="context-pill"><span className="pulse" /> <span>学习集群</span><code>kind-k8s-lab</code><ChevronRight size={14} /></div>
-        <div className="top-actions"><span className="sync-status"><Activity size={14} /> 本地模拟模式</span><button className="icon-button" aria-label="打开官方文档" onClick={() => setShowDocs(true)}><BookOpen size={18} /></button><button className="icon-button" aria-label="帮助" onClick={() => setShowGuide(true)}><CircleHelp size={18} /></button><div className="avatar">孔</div></div>
+        <div className="top-actions"><span className={`sync-status ${connection}`}><Activity size={14} /> {connectionLabel}</span><button className="connect-btn" onClick={connectLive} disabled={connection === "connecting"}><PlugZap size={14} /> {connection === "live" ? "刷新实机" : "连接实机"}</button><button className="icon-button" aria-label="打开官方文档" onClick={() => setShowDocs(true)}><BookOpen size={18} /></button><button className="icon-button" aria-label="帮助" onClick={() => setShowGuide(true)}><CircleHelp size={18} /></button><div className="avatar">孔</div></div>
       </header>
 
       <div className="layout">
@@ -123,7 +149,7 @@ function App() {
 
         <main className="main-content">
           <div className="page-head"><div><div className="eyebrow">阶段 {selected.id} / 05 · KIND CLUSTER</div><h1>{selected.title}</h1><p>{selected.subtitle} · 这一步先观察集群，再动手操作。</p></div><div className="head-actions"><button className="secondary-btn" onClick={() => setShowGuide(true)}><CircleHelp size={15} /> 查看本节目标</button><button className="primary-btn" onClick={retryImage}><RotateCcw size={15} /> 重试镜像</button></div></div>
-          <div className="notice"><AlertTriangle size={16} /><span>{notice}</span><button onClick={() => setNotice("已记录当前状态")}>记录状态</button></div>
+          <div className="notice" role="status" aria-live="polite"><AlertTriangle size={16} /><span>{notice}</span><button onClick={() => setNotice("已记录当前状态")}>记录状态</button></div>
 
           <section className="overview-grid"><div className="overview-cell"><span>集群状态</span><strong className="good-text"><span className="status-dot good" /> Ready</strong><small>control-plane · 1 node</small></div><div className="overview-cell"><span>命名空间</span><strong><Layers3 size={15} /> learning</strong><small>4 个资源 / 4 resources</small></div><div className="overview-cell"><span>工作负载</span><strong>{readyCount === 4 ? "2/2" : "0/2"} <span className="muted-text">副本可用</span></strong><small>{readyCount === 4 ? "所有 Pod 正常" : "等待镜像拉取"}</small></div><div className="overview-cell"><span>运行时</span><strong><Container size={15} /> Docker</strong><small>Docker Engine 29.7.2</small></div></section>
 
