@@ -14,11 +14,13 @@ import {
   Gauge,
   GitBranch,
   Layers3,
+  Moon,
   Play,
   PlugZap,
   RotateCcw,
   Server,
   ShieldCheck,
+  Sun,
   Terminal,
   X,
 } from "lucide-react";
@@ -66,6 +68,7 @@ function statusLabel(lab: Lab) {
 }
 
 function App() {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [selectedLab, setSelectedLab] = useState("02");
   const [resources, setResources] = useState(baseResources);
   const [showGuide, setShowGuide] = useState(false);
@@ -128,11 +131,11 @@ function App() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${theme}`}>
       <header className="topbar">
         <div className="brand"><div className="brand-mark"><Layers3 size={17} /></div><div><strong>Opspilot</strong><span>学习工作台</span></div></div>
         <div className="context-pill"><span className="pulse" /> <span>学习集群</span><code>kind-k8s-lab</code><ChevronRight size={14} /></div>
-        <div className="top-actions"><span className={`sync-status ${connection}`}><Activity size={14} /> {connectionLabel}</span><button className="connect-btn" onClick={connectLive} disabled={connection === "connecting"}><PlugZap size={14} /> {connection === "live" ? "刷新实机" : "连接实机"}</button><button className="icon-button" aria-label="打开官方文档" onClick={() => setShowDocs(true)}><BookOpen size={18} /></button><button className="icon-button" aria-label="帮助" onClick={() => setShowGuide(true)}><CircleHelp size={18} /></button><div className="avatar">孔</div></div>
+        <div className="top-actions"><span className={`sync-status ${connection}`}><Activity size={14} /> {connectionLabel}</span><button className="connect-btn" onClick={connectLive} disabled={connection === "connecting"}><PlugZap size={14} /> {connection === "live" ? "刷新实机" : "连接实机"}</button><button className="icon-button" aria-label={theme === "light" ? "切换深色模式" : "切换浅色模式"} onClick={() => setTheme((current) => current === "light" ? "dark" : "light")}>{theme === "light" ? <Moon size={18} /> : <Sun size={18} />}</button><button className="icon-button" aria-label="打开官方文档" onClick={() => setShowDocs(true)}><BookOpen size={18} /></button><button className="icon-button" aria-label="帮助" onClick={() => setShowGuide(true)}><CircleHelp size={18} /></button><div className="avatar">孔</div></div>
       </header>
 
       <div className="layout">

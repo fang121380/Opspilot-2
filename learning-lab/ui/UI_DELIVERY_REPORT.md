@@ -5,7 +5,9 @@
 - 新增 Vite + React + TypeScript 工作台，提供学习路径、集群资源、事件、练习和只读终端。
 - 增加官方资料抽屉：Kubernetes、Docker、Kind、kubectl 和 Opspilot-2 故障演练。
 - 增加本地自检器：检查 context 与镜像拉取证据，给出下一步纠错提示；不执行任意 Shell 或 Kubernetes 写操作。
+- 增加明亮/深色主题切换，默认明亮主题，并保持终端区域高对比。
 - 通过 `npm run build`、桌面/移动 Chrome 截图和 `visual-audit.mjs` 检查。
+- 已验证主题切换不会丢失练习状态，连接实机只读状态仍可用。
 
 ## 采用模式 / Patterns
 
@@ -22,4 +24,3 @@
 - 当前数据是本地模拟数据；集群镜像拉取失败需要在真实 API/集群适配层中展示。
 - 资源“重试镜像”目前只改变模拟状态，未执行 Kubernetes 写操作。
 - 真实 Token、Secret、回滚和权限变更必须通过人工确认后再接入。
-

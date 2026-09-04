@@ -19,7 +19,10 @@
 
 桌面使用侧栏 + 双列资源区；平板资源区单列；移动端阶段导航横向滚动、练习卡片单列、表格在容器内滚动。
 
+顶部提供明亮/深色主题切换，默认使用明亮主题以降低长时间学习时的视觉负担；切换不会改变集群状态或练习数据。
+
+The top bar provides a light/dark theme toggle. Light is the default for comfortable long study sessions; switching themes never changes cluster state or exercise data.
+
 ## 风险控制 / Risk controls
 
 模拟层不读取 Secret、不执行任意 Shell、不修改 `opspilot-2`。接入真实 API 时使用 allowlist context、只读默认权限和人工审批门。
-

@@ -29,8 +29,90 @@ button:disabled { cursor: not-allowed; }
 }
 @media (max-width: 700px) {
   .top-actions { gap: 2px; }
+  .context-pill { max-width: 145px; overflow: hidden; }
+  .context-pill code { max-width: 86px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .connect-btn { width: 40px; min-height: 40px; padding: 0; justify-content: center; font-size: 0; }
   .icon-button { min-width: 40px; min-height: 40px; }
   .lab-copy small { white-space: normal; line-height: 1.35; max-height: 31px; }
   .resource-detail { white-space: normal; line-height: 1.35; }
 }
+
+/* Bright observability canvas: white work surfaces with teal and amber semantics. */
+.app-shell.light { background: #f4f7f9; color: #1f2a34; }
+.app-shell.light .topbar { background: rgba(255,255,255,.96); border-color: #dce4e9; }
+.app-shell.light .brand strong, .app-shell.light .page-head h1, .app-shell.light .panel-head h2, .app-shell.light .section-title h2 { color: #17222d; }
+.app-shell.light .brand span, .app-shell.light .page-head p, .app-shell.light .panel-head p, .app-shell.light .overview-cell > span { color: #687988; }
+.app-shell.light .brand-mark { background: #eaf7f5; border-color: #9dd4cb; color: #12756b; }
+.app-shell.light .context-pill { background: #f7fafb; border-color: #d6e0e6; color: #5d6e7b; }
+.app-shell.light .context-pill code { background: #e9eff3; color: #263844; }
+.app-shell.light .icon-button { color: #61717f; }
+.app-shell.light .icon-button:hover, .app-shell.light .icon-button:focus-visible { background: #e9f1f1; color: #17665e; }
+.app-shell.light .avatar { background: #d7eee9; color: #16685d; }
+.app-shell.light .sync-status { color: #5d6d79; }
+.app-shell.light .sync-status.live { color: #168164; }
+.app-shell.light .sync-status.error { color: #9a6700; }
+.app-shell.light .connect-btn { background: #eff8f6; border-color: #a8d4cd; color: #176b62; }
+.app-shell.light .connect-btn:hover:not(:disabled) { background: #e2f2ef; border-color: #6eafa5; }
+.app-shell.light .sidebar { background: #fbfcfd; border-color: #dce4e9; }
+.app-shell.light .side-heading { color: #40515e; }
+.app-shell.light .progress { color: #80909c; }
+.app-shell.light .path-track { border-color: #d3dee4; }
+.app-shell.light .lab-item { color: #657582; }
+.app-shell.light .lab-item:hover:not(:disabled) { background: #eef5f6; }
+.app-shell.light .lab-item.selected { background: #e8f5f3; border-color: #acd8d1; color: #164d48; }
+.app-shell.light .lab-index { background: #fff; border-color: #b8c8d1; color: #71818d; }
+.app-shell.light .lab-item.done .lab-index { background: #def2eb; border-color: #85c8ae; color: #197457; }
+.app-shell.light .lab-item.selected .lab-index { border-color: #5cafa1; color: #197165; }
+.app-shell.light .lab-copy small { color: #748591; }
+.app-shell.light .lab-state { color: #7f8e99; }
+.app-shell.light .lab-state.active { color: #1b7d70; }
+.app-shell.light .lab-state.done { color: #1d8666; }
+.app-shell.light .sidebar-foot { border-color: #dce4e9; color: #667783; }
+.app-shell.light .sidebar-foot p { color: #7a8a95; }
+.app-shell.light .sidebar-foot code { color: #21685f; }
+.app-shell.light .notice { background: #fff8e9; border-color: #ead7aa; color: #8b650f; }
+.app-shell.light .notice svg { color: #c18a18; }
+.app-shell.light .notice button { color: #9a6f13; }
+.app-shell.light .overview-grid, .app-shell.light .panel, .app-shell.light .exercise-step { background: #fff; border-color: #d7e1e7; }
+.app-shell.light .overview-cell { border-color: #d7e1e7; }
+.app-shell.light .overview-cell strong { color: #1d2d38; }
+.app-shell.light .overview-cell small { color: #71828e; }
+.app-shell.light .good-text { color: #147b61 !important; }
+.app-shell.light .muted-text { color: #748592; }
+.app-shell.light .table-row { border-color: #e1e8ed; }
+.app-shell.light .table-row:not(.table-header):hover { background: #f2f7f8; }
+.app-shell.light .table-header { color: #7a8b97; }
+.app-shell.light .resource-kind { color: #526672; }
+.app-shell.light .kind-icon { color: #31867d; border-color: #afd3ce; background: #f0f8f7; }
+.app-shell.light .table-row strong { color: #273945; }
+.app-shell.light .state-tag { color: #657681; }
+.app-shell.light .state-tag.good { color: #188261; }
+.app-shell.light .state-tag.warn { color: #9b6c0f; }
+.app-shell.light .resource-detail { color: #71818e; }
+.app-shell.light .panel-foot { border-color: #e1e8ed; color: #7b8b96; }
+.app-shell.light .text-btn { color: #197d72; }
+.app-shell.light .text-btn:hover { color: #115d56; }
+.app-shell.light .event-line { border-color: #d1dee4; }
+.app-shell.light .event-icon { background: #f7fafb; border-color: #c5d4db; }
+.app-shell.light .event-icon.warn { color: #b77a10; border-color: #e1c68f; }
+.app-shell.light .event-icon.good { color: #168264; border-color: #a3d1c0; }
+.app-shell.light .event-icon.muted { color: #778894; }
+.app-shell.light .event strong { color: #354752; }
+.app-shell.light .event p { color: #71828e; }
+.app-shell.light .event time { color: #8a99a3; }
+.app-shell.light .exercise-score { color: #71818e; }
+.app-shell.light .exercise-step strong { color: #2b3b46; }
+.app-shell.light .exercise-step p { color: #70818d; }
+.app-shell.light .step-number { border-color: #76bcb0; color: #1b7a6f; }
+.app-shell.light .muted-step { border-color: #bccbd3; color: #7c8d98; }
+.app-shell.light .command-chip { color: #176d63; background: #eef8f6; border-color: #b6dcd5; }
+.app-shell.light .command-controls select, .app-shell.light .filter-btn, .app-shell.light .secondary-btn, .app-shell.light .outline-btn { background: #f7fafb; border-color: #cad7de; color: #50636f; }
+.app-shell.light .command-controls select:focus-visible, .app-shell.light .filter-btn:focus-visible, .app-shell.light .secondary-btn:focus-visible, .app-shell.light .outline-btn:focus-visible { outline: 2px solid #75bfb5; outline-offset: 2px; }
+.app-shell.light .run-btn { background: #e2f3ef; border-color: #8ccabe; color: #17695f; }
+.app-shell.light .run-btn:hover { background: #d1ebe5; }
+.app-shell.light .modal-backdrop { background: rgba(26, 39, 47, .38); }
+.app-shell.light .guide-modal { background: #fff; border-color: #d4e0e5; box-shadow: 0 18px 60px rgba(38, 62, 74, .18); }
+.app-shell.light .modal-head h2 { color: #1f303b; }
+.app-shell.light .guide-modal > p { color: #6c7d89; }
+.app-shell.light .guide-list { color: #50626f; }
+.app-shell.light .guide-list code { background: #e7f4f1; color: #176a61; }

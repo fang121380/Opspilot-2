@@ -4,12 +4,12 @@ Target: http://127.0.0.1:5173
 
 ## Screenshots
 
-- Desktop: screenshots/learning-lab-after-desktop.png
-- Mobile: screenshots/learning-lab-after-mobile.png
+- Desktop: screenshots/learning-lab-light-final-desktop.png
+- Mobile: screenshots/learning-lab-light-final-mobile.png
 
 ## Desktop Checks
 
-- PASS blank / loading risk: body text 1411, screenshot 225422 bytes
+- PASS blank / loading risk: body text 1411, screenshot 187082 bytes
 - PASS horizontal scroll: scrollWidth 1425, viewport 1440
 - FAIL text overflow candidates: 1
 - FAIL small button candidates: 9
@@ -17,9 +17,9 @@ Target: http://127.0.0.1:5173
 
 ## Mobile Checks
 
-- PASS blank / loading risk: body text 1352, screenshot 80544 bytes
+- PASS blank / loading risk: body text 1352, screenshot 66773 bytes
 - PASS horizontal scroll: scrollWidth 421, viewport 421
-- FAIL text overflow candidates: 10
+- FAIL text overflow candidates: 11
 - FAIL small button candidates: 9
 - PASS large fixed overlay candidates: 0
 
@@ -31,6 +31,7 @@ Target: http://127.0.0.1:5173
 ### Mobile
 - div: "kind-k8s-lab 连接实机 孔 学习路径 2/5 环境检查 Docker、kubectl、Kind 10 分钟 已完成 Docker 基础 镜像、容器、" (390/420)
 - div: "kind-k8s-lab 连接实机 孔 学习路径 2/5 环境检查 Docker、kubectl、Kind 10 分钟 已完成 Docker 基础 镜像、容器、" (390/420)
+- code: "kind-k8s-lab" (62/91)
 - div: "学习路径 2/5 环境检查 Docker、kubectl、Kind 10 分钟 已完成 Docker 基础 镜像、容器、端口 25 分钟 已完成 02 Kind" (390/420)
 - nav: "环境检查 Docker、kubectl、Kind 10 分钟 已完成 Docker 基础 镜像、容器、端口 25 分钟 已完成 02 Kind 集群 节点、上下" (192/570)
 - main: "阶段 02 / 05 · KIND CLUSTER Kind 集群 节点、上下文、命名空间 · 这一步先观察集群，再动手操作。 查看本节目标 重试镜像 学习集群" (390/420)

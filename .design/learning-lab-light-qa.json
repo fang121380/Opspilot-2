@@ -1,0 +1,219 @@
+{
+  "target": "http://127.0.0.1:5173",
+  "desktop": {
+    "title": "Opspilot 学习工作台",
+    "url": "http://127.0.0.1:5173/",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "bodyTextLength": 1411,
+    "bodyTextSample": "Opspilot 学习工作台 学习集群 kind-k8s-lab 本地模拟 连接实机 孔 学习路径 2/5 环境检查 Docker、kubectl、Kind 10 分钟 已完成 Docker 基础 镜像、容器、端口 25 分钟 已完成 02 Kind 集群 节点、上下文、命名空间 30 分钟 进行中 03 部署一个应用 Pod、Deployment、Service 35 分钟 未解锁 04 故障排查 日志、探针、滚动更新 45 分钟 未解锁 安全边界 只操作 k8s-lab，",
+    "horizontalScroll": false,
+    "scrollWidth": 1425,
+    "textOverflow": [
+      {
+        "tag": "small",
+        "text": "Pod、Deployment、Service",
+        "clientWidth": 135,
+        "scrollWidth": 144
+      }
+    ],
+    "smallButtons": [
+      {
+        "tag": "button",
+        "text": "查看本节目标",
+        "width": 118,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "重试镜像",
+        "width": 94,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "记录状态",
+        "width": 56,
+        "height": 28
+      },
+      {
+        "tag": "button",
+        "text": "刷新",
+        "width": 53,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "查看 YAML",
+        "width": 88,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "全部",
+        "width": 69,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "执行",
+        "width": 67,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "自动自检",
+        "width": 93,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "清空终端",
+        "width": 32,
+        "height": 32
+      }
+    ],
+    "blockingFixed": [],
+    "hasMain": true,
+    "screenshotPath": "/Users/andrew/Documents/Codex/2026-08-27/fen/.design/screenshots/learning-lab-light-desktop.png",
+    "screenshotBytes": 187082,
+    "blankRisk": false
+  },
+  "mobile": {
+    "title": "Opspilot 学习工作台",
+    "url": "http://127.0.0.1:5173/",
+    "viewport": {
+      "width": 421,
+      "height": 909
+    },
+    "bodyTextLength": 1352,
+    "bodyTextSample": "kind-k8s-lab 连接实机 孔 学习路径 2/5 环境检查 Docker、kubectl、Kind 10 分钟 已完成 Docker 基础 镜像、容器、端口 25 分钟 已完成 02 Kind 集群 节点、上下文、命名空间 30 分钟 进行中 03 部署一个应用 Pod、Deployment、Service 35 分钟 未解锁 04 故障排查 日志、探针、滚动更新 45 分钟 未解锁 阶段 02 / 05 · KIND CLUSTER Kind 集群 节点、上下文、命",
+    "horizontalScroll": false,
+    "scrollWidth": 421,
+    "textOverflow": [
+      {
+        "tag": "div",
+        "text": "kind-k8s-lab 连接实机 孔 学习路径 2/5 环境检查 Docker、kubectl、Kind 10 分钟 已完成 Docker 基础 镜像、容器、",
+        "clientWidth": 390,
+        "scrollWidth": 420
+      },
+      {
+        "tag": "div",
+        "text": "kind-k8s-lab 连接实机 孔 学习路径 2/5 环境检查 Docker、kubectl、Kind 10 分钟 已完成 Docker 基础 镜像、容器、",
+        "clientWidth": 390,
+        "scrollWidth": 420
+      },
+      {
+        "tag": "div",
+        "text": "学习路径 2/5 环境检查 Docker、kubectl、Kind 10 分钟 已完成 Docker 基础 镜像、容器、端口 25 分钟 已完成 02 Kind",
+        "clientWidth": 390,
+        "scrollWidth": 420
+      },
+      {
+        "tag": "nav",
+        "text": "环境检查 Docker、kubectl、Kind 10 分钟 已完成 Docker 基础 镜像、容器、端口 25 分钟 已完成 02 Kind 集群 节点、上下",
+        "clientWidth": 192,
+        "scrollWidth": 570
+      },
+      {
+        "tag": "main",
+        "text": "阶段 02 / 05 · KIND CLUSTER Kind 集群 节点、上下文、命名空间 · 这一步先观察集群，再动手操作。 查看本节目标 重试镜像 学习集群",
+        "clientWidth": 390,
+        "scrollWidth": 420
+      },
+      {
+        "tag": "div",
+        "text": "类型 名称 状态 详情 Deployment hello-web Progressing 0/2 available · image pull timeout ",
+        "clientWidth": 360,
+        "scrollWidth": 640
+      },
+      {
+        "tag": "strong",
+        "text": "hello-web-7f6d9d9c8c-2kq8m",
+        "clientWidth": 150,
+        "scrollWidth": 170
+      },
+      {
+        "tag": "strong",
+        "text": "hello-web-7f6d9d9c8c-qxj2p",
+        "clientWidth": 150,
+        "scrollWidth": 163
+      },
+      {
+        "tag": "section",
+        "text": "动手练习 / PRACTICE 确认当前 Context，并找出镜像问题 0 / 3 检查点 1 确认你操作的是学习集群 不要凭记忆操作，先打印当前 conte",
+        "clientWidth": 362,
+        "scrollWidth": 406
+      },
+      {
+        "tag": "div",
+        "text": "1 确认你操作的是学习集群 不要凭记忆操作，先打印当前 context。 kubectl config current-context 2 执行一条只读检查 从",
+        "clientWidth": 362,
+        "scrollWidth": 406
+      }
+    ],
+    "smallButtons": [
+      {
+        "tag": "button",
+        "text": "查看本节目标",
+        "width": 177,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "重试镜像",
+        "width": 177,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "记录状态",
+        "width": 56,
+        "height": 28
+      },
+      {
+        "tag": "button",
+        "text": "刷新",
+        "width": 53,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "查看 YAML",
+        "width": 88,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "全部",
+        "width": 69,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "执行",
+        "width": 67,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "自动自检",
+        "width": 93,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "清空终端",
+        "width": 32,
+        "height": 32
+      }
+    ],
+    "blockingFixed": [],
+    "hasMain": true,
+    "screenshotPath": "/Users/andrew/Documents/Codex/2026-08-27/fen/.design/screenshots/learning-lab-light-mobile.png",
+    "screenshotBytes": 67564,
+    "blankRisk": false
+  }
+}
