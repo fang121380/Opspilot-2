@@ -42,6 +42,12 @@ make demo
 make run
 ```
 
+## 零基础学习工作台 / Beginner learning lab
+
+按 Docker -> Kind -> Kubernetes -> 故障排查逐步练习：进入 [`learning-lab/`](learning-lab/README.md)，运行 `make -C learning-lab check` 和 `make -C learning-lab up`。工作台只使用独立的 `k8s-lab` 集群，不会修改 `opspilot-2`。
+
+Follow the Docker -> Kind -> Kubernetes -> troubleshooting path in [`learning-lab/`](learning-lab/README.md). Run `make -C learning-lab check` then `make -C learning-lab up`. It uses an isolated `k8s-lab` cluster and never changes `opspilot-2`.
+
 默认健康检查：`http://127.0.0.1:8000/health`。OpenAPI：`http://127.0.0.1:8000/docs`。Prometheus 指标：`http://127.0.0.1:8000/metrics`。Compose 可通过 `OPSPILOT_HOST_PORT` 改用未占用的宿主机端口。
 
 ## 已完成能力

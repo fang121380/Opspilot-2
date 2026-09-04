@@ -15,6 +15,7 @@ Project documentation is maintained in Chinese and English pairs. Chinese pages 
 | 面试提纲 / Interview guide | [interview-zh.md](interview-zh.md) | [interview-en.md](interview-en.md) |
 | 演示场景 / Demo scenario | [demo-scenario-zh.md](demo-scenario-zh.md) | [demo-scenario.md](demo-scenario.md) |
 | 开发环境 / Development environment | [development-environment-zh.md](development-environment-zh.md) | [development-environment.md](development-environment.md) |
+| 零基础学习工作台 / Beginner lab | [learning-lab/README.md](../learning-lab/README.md) | [learning-lab/README.md](../learning-lab/README.md) |
 | 开源调研 / Open-source research | [research/open-source-landscape-zh.md](research/open-source-landscape-zh.md) | [research/open-source-landscape.md](research/open-source-landscape.md) |
 | ADR 决策记录 / ADRs | [adr/README-zh.md](adr/README-zh.md) | [adr/README.md](adr/README.md) |
 
