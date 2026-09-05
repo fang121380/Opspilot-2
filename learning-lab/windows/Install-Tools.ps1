@@ -4,11 +4,13 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
   throw "winget is required. Install App Installer from Microsoft Store first."
 }
 
-winget install --id Git.Git -e --accept-source-agreements --accept-package-agreements
-winget install --id Kubernetes.kind -e --accept-source-agreements --accept-package-agreements
-winget install --id Kubernetes.kubectl -e --accept-source-agreements --accept-package-agreements
-winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements
-winget install --id Python.Python.3.12 -e --accept-source-agreements --accept-package-agreements
+foreach ($package in @("Git.Git", "Kubernetes.kind", "Kubernetes.kubectl", "OpenJS.NodeJS.LTS", "Python.Python.3.12")) {
+  winget install --id $package -e --accept-source-agreements --accept-package-agreements
+  # UPDATE_NOT_APPLICABLE means the installed package has no applicable upgrade.
+  if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1978335189) {
+    throw "winget failed for $package (exit $LASTEXITCODE)."
+  }
+}
 
-Write-Host "工具安装完成。请关闭并重新打开 PowerShell，再运行 Check-Prerequisites.ps1。" -ForegroundColor Green
+Write-Host "Tools installed. Reopen PowerShell, then run Check-Prerequisites.ps1." -ForegroundColor Green
 
