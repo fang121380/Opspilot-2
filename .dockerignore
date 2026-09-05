@@ -14,4 +14,11 @@ docs
 infra/kind
 scripts
 .DS_Store
+**/node_modules
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo
+work
+.env
+.env.*
 

@@ -19,6 +19,14 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: learning-lab/ui/package-lock.json
+      - name: Install workbench dependencies for proxy integration tests
+        working-directory: learning-lab/ui
+        run: npm ci
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e '.[dev]'
       - run: python -m ruff check .
@@ -27,6 +35,31 @@ jobs:
       - run: python scripts/run-local-demo.py
       - name: Build container image
         run: docker build --tag opspilot-2:ci .
+
+  workbench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: learning-lab/ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: learning-lab/ui/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx tsc --noEmit --skipLibCheck --module ESNext --moduleResolution Bundler --target ES2022 vite.config.ts playwright.config.ts
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: workbench-browser-failures
+          path: learning-lab/ui/test-results/
 
   compose-runtime:
     needs: quality

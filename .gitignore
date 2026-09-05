@@ -25,3 +25,7 @@ work/
 
 # Local learning-workbench launcher logs
 learning-lab/.workbench-logs/
+node_modules/
+*.tsbuildinfo
+learning-lab/ui/test-results/
+learning-lab/ui/playwright-report/
