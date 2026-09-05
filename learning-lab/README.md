@@ -55,9 +55,9 @@ npm install
 npm run dev
 ```
 
-打开 `http://127.0.0.1:5173`。界面当前使用本地模拟数据，提供官方文档入口、自检纠错和只读命令练习；接入 Opspilot 的边界见 [接入计划 / Integration plan](INTEGRATION_PLAN.md)。
+打开 `http://127.0.0.1:5173`。工作台包含概览、学习路径、集群资源、容器日志和事故中心五个模块：默认使用安全的本地模拟数据，点击“连接实机”后通过 allowlist 只读桥接同步 `k8s-lab` 的资源、事件和日志；事故中心可只读查看本机 Opspilot API 的健康状态与事故列表。接入边界见 [接入计划 / Integration plan](INTEGRATION_PLAN.md)。
 
-Open `http://127.0.0.1:5173`. The UI currently uses local mock data and provides official docs, self-check feedback, and read-only command exercises. See [INTEGRATION_PLAN.md](INTEGRATION_PLAN.md) for the Opspilot integration boundary.
+Open `http://127.0.0.1:5173`. The full workbench has overview, learning path, cluster resources, container logs, and an incident center. It starts with safe local mock data; “连接实机 / Connect lab” reads allowlisted resources, events, and logs from `k8s-lab`, while the incident center can read Opspilot health and incident records. See [INTEGRATION_PLAN.md](INTEGRATION_PLAN.md) for the integration boundary.
 
 Windows 用户可直接使用 [Windows 一键部署 / Windows one-click deployment](windows/README.md)，其中的 `Install-All.ps1` 会安装全部工具并启动学习集群。
 

@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLUSTER_NAME="opspilot-2"
+CONTEXT="kind-${CLUSTER_NAME}"
 SECRETS_DIR="$ROOT_DIR/.secrets"
 OPERATOR_TOKEN_FILE="$SECRETS_DIR/opspilot-kind-token"
 ALERTMANAGER_TOKEN_FILE="$SECRETS_DIR/opspilot-kind-alertmanager-token"
@@ -13,6 +14,12 @@ if ! command -v docker >/dev/null 2>&1 && [[ -x /Applications/Docker.app/Content
   export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"
 fi
 
+# Never rely on the caller's current kubectl context. The learning lab uses a
+# separate Kind cluster, so every demo command must target Opspilot explicitly.
+k() {
+  kubectl --context "$CONTEXT" "$@"
+}
+
 case "${1:-up}" in
   up)
     if ! kind get clusters | grep -Fx "$CLUSTER_NAME" >/dev/null; then
@@ -22,7 +29,7 @@ case "${1:-up}" in
     docker build -t opspilot-2/checkout:dev "$ROOT_DIR/demo"
     kind load docker-image --name "$CLUSTER_NAME" opspilot-2/api:dev
     kind load docker-image --name "$CLUSTER_NAME" opspilot-2/checkout:dev
-    kubectl apply -f "$ROOT_DIR/infra/kind/namespace.yaml"
+    k apply -f "$ROOT_DIR/infra/kind/namespace.yaml"
     mkdir -p "$SECRETS_DIR"
     if [[ ! -s "$OPERATOR_TOKEN_FILE" ]]; then
       umask 077
@@ -32,35 +39,35 @@ case "${1:-up}" in
       umask 077
       openssl rand -hex 32 >"$ALERTMANAGER_TOKEN_FILE"
     fi
-    kubectl -n demo create secret generic opspilot-2-operator-auth \
+    k -n demo create secret generic opspilot-2-operator-auth \
       --from-literal=token="$(<"$OPERATOR_TOKEN_FILE")" \
       --from-literal=operator-id="kind-operator" \
-      --dry-run=client -o yaml | kubectl apply -f -
-    kubectl -n demo create secret generic opspilot-2-alertmanager-auth \
+      --dry-run=client -o yaml | k apply -f -
+    k -n demo create secret generic opspilot-2-alertmanager-auth \
       --from-literal=token="$(<"$ALERTMANAGER_TOKEN_FILE")" \
-      --dry-run=client -o yaml | kubectl apply -f -
-    kubectl apply -f "$ROOT_DIR/infra/kind/opspilot-rbac.yaml"
-    kubectl apply -f "$ROOT_DIR/infra/kind/checkout-v1.yaml"
+      --dry-run=client -o yaml | k apply -f -
+    k apply -f "$ROOT_DIR/infra/kind/opspilot-rbac.yaml"
+    k apply -f "$ROOT_DIR/infra/kind/checkout-v1.yaml"
     # 旧版演练曾创建集群级 Prometheus RBAC；仅清理本项目的已知旧对象。
-    kubectl delete clusterrole opspilot-2-prometheus --ignore-not-found
-    kubectl delete clusterrolebinding opspilot-2-prometheus --ignore-not-found
-    kubectl apply -f "$ROOT_DIR/infra/kind/prometheus.yaml"
-    kubectl apply -f "$ROOT_DIR/infra/kind/opspilot.yaml"
-    kubectl -n demo rollout restart deployment/prometheus
-    kubectl -n demo rollout restart deployment/opspilot-2
-    kubectl -n demo rollout restart deployment/alertmanager
-    kubectl -n demo rollout status deployment/checkout --timeout=120s
-    kubectl -n demo rollout status deployment/prometheus --timeout=120s
-    kubectl -n demo rollout status deployment/opspilot-2 --timeout=120s
-    kubectl -n demo rollout status deployment/alertmanager --timeout=120s
+    k delete clusterrole opspilot-2-prometheus --ignore-not-found
+    k delete clusterrolebinding opspilot-2-prometheus --ignore-not-found
+    k apply -f "$ROOT_DIR/infra/kind/prometheus.yaml"
+    k apply -f "$ROOT_DIR/infra/kind/opspilot.yaml"
+    k -n demo rollout restart deployment/prometheus
+    k -n demo rollout restart deployment/opspilot-2
+    k -n demo rollout restart deployment/alertmanager
+    k -n demo rollout status deployment/checkout --timeout=120s
+    k -n demo rollout status deployment/prometheus --timeout=120s
+    k -n demo rollout status deployment/opspilot-2 --timeout=120s
+    k -n demo rollout status deployment/alertmanager --timeout=120s
     ;;
   inject-failure)
-    kubectl -n demo patch deployment checkout --type=strategic \
+    k -n demo patch deployment checkout --type=strategic \
       -p '{"spec":{"template":{"metadata":{"annotations":{"opspilot.io/failure":"v2"}},"spec":{"containers":[{"name":"checkout","env":[{"name":"CHECKOUT_FAILURE_MODE","value":"always"}]}]}}}}'
-    kubectl -n demo rollout status deployment/checkout --timeout=120s
+    k -n demo rollout status deployment/checkout --timeout=120s
     # 在服务进程内部生成请求，避免额外依赖本机端口转发或临时镜像。
     # HTTP 500 会被服务自身的 Prometheus Counter 记录，供告警规则验证。
-    kubectl -n demo exec -i deployment/checkout -- python - <<'PY'
+    k -n demo exec -i deployment/checkout -- python - <<'PY'
 from urllib.error import HTTPError
 from urllib.request import urlopen
 from time import sleep
@@ -75,9 +82,9 @@ for _ in range(20):
 PY
     ;;
   recover)
-    kubectl -n demo patch deployment checkout --type=strategic \
+    k -n demo patch deployment checkout --type=strategic \
       -p '{"spec":{"template":{"metadata":{"annotations":{"opspilot.io/failure":"v1"}},"spec":{"containers":[{"name":"checkout","env":[{"name":"CHECKOUT_FAILURE_MODE","value":"none"}]}]}}}}'
-    kubectl -n demo rollout status deployment/checkout --timeout=120s
+    k -n demo rollout status deployment/checkout --timeout=120s
     ;;
   down)
     kind delete cluster --name "$CLUSTER_NAME"

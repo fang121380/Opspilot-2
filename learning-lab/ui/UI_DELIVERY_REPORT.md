@@ -6,6 +6,9 @@
 - 增加官方资料抽屉：Kubernetes、Docker、Kind、kubectl 和 Opspilot-2 故障演练。
 - 增加本地自检器：检查 context 与镜像拉取证据，给出下一步纠错提示；不执行任意 Shell 或 Kubernetes 写操作。
 - 增加明亮/深色主题切换，默认明亮主题，并保持终端区域高对比。
+- 将原型扩展为完整本地工作台：概览、学习路径、资源/事件/日志、Opspilot 事故中心、进度重置和实机只读连接。
+- `lab-api.py` 增加固定的 `logs` 查询和 localhost CORS，前端可一次刷新资源、事件和容器日志。
+- 事故中心接入 Opspilot `/health` 与 `/incidents` 只读接口；写操作仍由人工审批门保护。
 - 通过 `npm run build`、桌面/移动 Chrome 截图和 `visual-audit.mjs` 检查。
 - 已验证主题切换不会丢失练习状态，连接实机只读状态仍可用。
 

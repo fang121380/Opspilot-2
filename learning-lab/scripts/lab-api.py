@@ -19,6 +19,7 @@ ALLOWED = {
     "nodes": ["get", "nodes", "-o", "wide"],
     "resources": ["-n", NAMESPACE, "get", "deploy,pods,svc", "-o", "wide"],
     "events": ["-n", NAMESPACE, "get", "events", "--sort-by=.lastTimestamp"],
+    "logs": ["-n", NAMESPACE, "logs", "deployment/hello-web", "--tail=20"],
 }
 
 
@@ -38,7 +39,10 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(payload, ensure_ascii=False).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "http://127.0.0.1:5173")
+        origin = self.headers.get("Origin", "")
+        allowed = {"http://127.0.0.1:5173", "http://localhost:5173"}
+        allowed_origin = origin if origin in allowed else "http://127.0.0.1:5173"
+        self.send_header("Access-Control-Allow-Origin", allowed_origin)
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
