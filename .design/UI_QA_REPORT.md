@@ -4,50 +4,42 @@ Target: http://127.0.0.1:5173
 
 ## Screenshots
 
-- Desktop: screenshots/terminal-responsive-desktop.png
-- Mobile: screenshots/terminal-responsive-mobile.png
+- Desktop: screenshots/beginner-full-final-desktop.png
+- Mobile: screenshots/beginner-full-final-mobile.png
 
 ## Desktop Checks
 
-- PASS blank / loading risk: body text 924, screenshot 239205 bytes
-- PASS horizontal scroll: scrollWidth 1440, viewport 1440
-- FAIL text overflow candidates: 1
-- FAIL small button candidates: 6
+- PASS blank / loading risk: body text 861, screenshot 194435 bytes
+- PASS horizontal scroll: scrollWidth 1425, viewport 1440
+- PASS text overflow candidates: 0
+- PASS small button candidates: 0
 - PASS large fixed overlay candidates: 0
 
 ## Mobile Checks
 
-- PASS blank / loading risk: body text 625, screenshot 106938 bytes
-- PASS horizontal scroll: scrollWidth 390, viewport 390
-- FAIL text overflow candidates: 2
-- FAIL small button candidates: 5
+- PASS blank / loading risk: body text 567, screenshot 64167 bytes
+- PASS horizontal scroll: scrollWidth 406, viewport 406
+- FAIL text overflow candidates: 3
+- PASS small button candidates: 0
 - PASS large fixed overlay candidates: 0
 
 ## Text Overflow Candidates
 
 ### Desktop
-- small: "Pod、Deployment、Service" (135/144)
+- None
 
 ### Mobile
-- code: "kind-k8s-lab" (86/91)
-- small: "Deployment · Pod · Service · Event" (155/181)
+- div: "kind-k8s-lab 连接实机 零基础学习模式 先别碰集群，从三个工具开始。 每一课都会先解释概念，再让你执行命令、检查结果和完成小测。看不懂的词可以随时打" (390/406)
+- div: "kind-k8s-lab 连接实机 零基础学习模式 先别碰集群，从三个工具开始。 每一课都会先解释概念，再让你执行命令、检查结果和完成小测。看不懂的词可以随时打" (390/406)
+- header: "kind-k8s-lab 连接实机" (390/406)
 
 ## Small Button Candidates
 
 ### Desktop
-- button: "重置进度" (62x22)
-- button: "查看集群" (94x32)
-- button: "继续学习" (94x32)
-- button: "查看路径" (77x32)
-- button: "开始" (69x32)
-- button: "连接学习集群" (376x32)
+- None
 
 ### Mobile
-- button: "查看集群" (177x32)
-- button: "继续学习" (177x32)
-- button: "查看路径" (74x32)
-- button: "开始" (68x32)
-- button: "连接学习集群" (96x32)
+- None
 
 ## Large Fixed Overlay Candidates
 

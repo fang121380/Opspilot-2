@@ -17,7 +17,7 @@ NAMESPACE = "learning"
 ALLOWED = {
     "context": ["config", "current-context"],
     "nodes": ["get", "nodes", "-o", "wide"],
-    "resources": ["-n", NAMESPACE, "get", "deploy,pods,svc", "-o", "wide"],
+    "resources": ["-n", NAMESPACE, "get", "deploy,pods,svc", "-o", "json"],
     "events": ["-n", NAMESPACE, "get", "events", "--sort-by=.lastTimestamp"],
     "logs": ["-n", NAMESPACE, "logs", "deployment/hello-web", "--tail=20"],
 }

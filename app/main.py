@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from kubernetes_asyncio import client
 
 from app.adapters.kubernetes_client import from_kubeconfig
@@ -100,6 +101,12 @@ def create_app(
         description="Safety-first AI incident response for Kubernetes workloads.",
         version="0.1.0",
         lifespan=lifespan,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
+        allow_methods=["GET"],
+        allow_headers=["Accept", "Content-Type"],
     )
     app.state.incident_repository = incident_repository or relational_store or IncidentRepository()
     app.state.audit_repository = audit_repository or relational_store or AuditRepository()

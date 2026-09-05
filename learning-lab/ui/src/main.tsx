@@ -1,169 +1,455 @@
 import { createRoot } from "react-dom/client";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity, AlertCircle, AlertTriangle, BookOpen, Check, ChevronRight, CircleHelp,
-  Clock3, Command, Container, ExternalLink, FileCode2, Gauge, Layers3, ListChecks,
-  Menu, Moon, Play, PlugZap, RefreshCw, RotateCcw, Search, Server, ShieldCheck,
-  Sun, Terminal, Trash2, X,
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  BookOpen,
+  Check,
+  ChevronRight,
+  CircleHelp,
+  Clock3,
+  Command,
+  ExternalLink,
+  FileCode2,
+  Gauge,
+  Layers3,
+  ListChecks,
+  Menu,
+  Moon,
+  Play,
+  PlugZap,
+  RefreshCw,
+  Search,
+  Server,
+  ShieldCheck,
+  Sun,
+  Terminal,
+  Trash2,
+  X,
 } from "lucide-react";
+import { glossary, lessons, type Lesson } from "./curriculum";
+import { runSimulatedCommand } from "./terminal";
 import "./styles.css";
 
-type LabState = "todo" | "active" | "done";
-type Lab = { id: string; title: string; subtitle: string; duration: string };
-type Resource = { kind: string; name: string; status: string; detail: string; tone: "good" | "warn" | "muted" };
 type ConnectionState = "mock" | "connecting" | "live" | "error";
 type View = "overview" | "learn" | "cluster" | "incidents";
-type LabApiResponse = { query: string; ok: boolean; output?: string; error?: string };
-type Incident = { id: string; title: string; status: string; severity: string; created_at?: string };
-
-const labs: Lab[] = [
-  { id: "00", title: "环境检查", subtitle: "Docker、kubectl、Kind", duration: "10 分钟" },
-  { id: "01", title: "Docker 基础", subtitle: "镜像、容器、端口", duration: "25 分钟" },
-  { id: "02", title: "Kind 集群", subtitle: "节点、上下文、命名空间", duration: "30 分钟" },
-  { id: "03", title: "部署一个应用", subtitle: "Pod、Deployment、Service", duration: "35 分钟" },
-  { id: "04", title: "故障排查", subtitle: "日志、探针、滚动更新", duration: "45 分钟" },
-];
-const baseResources: Resource[] = [
-  { kind: "Deployment", name: "hello-web", status: "Progressing", detail: "0/2 available · image pull timeout", tone: "warn" },
-  { kind: "Service", name: "hello-web", status: "Created", detail: "ClusterIP · port 80", tone: "good" },
-  { kind: "Pod", name: "hello-web-7f6d9d9c8c-2kq8m", status: "Pending", detail: "ContainerCreating", tone: "warn" },
-  { kind: "Pod", name: "hello-web-7f6d9d9c8c-qxj2p", status: "Pending", detail: "ContainerCreating", tone: "warn" },
-];
-const stageCommands: Record<string, string[]> = {
-  "00": ["docker --version", "kind version", "kubectl version --client"],
-  "01": ["docker image ls", "docker run --rm hello-world", "docker ps"],
-  "02": ["kubectl config current-context", "kubectl get nodes", "kubectl get namespaces"],
-  "03": ["kubectl -n learning get deployment", "kubectl -n learning get pods", "kubectl -n learning get service"],
-  "04": ["kubectl -n learning get events --sort-by=.lastTimestamp", "kubectl -n learning logs deployment/hello-web", "kubectl -n learning describe pod -l app=hello-web"],
+type Resource = {
+  kind: string;
+  name: string;
+  status: string;
+  detail: string;
+  tone: "good" | "warn" | "muted";
 };
-const docs = [
-  { name: "Kubernetes 官方文档", desc: "概念、教程与任务", url: "https://kubernetes.io/zh-cn/docs/home/" },
-  { name: "Docker 官方文档", desc: "镜像、容器与 Compose", url: "https://docs.docker.com/" },
-  { name: "Kind 官方 Quick Start", desc: "本地集群与多节点配置", url: "https://kind.sigs.k8s.io/docs/user/quick-start/" },
-  { name: "kubectl 命令参考", desc: "每条命令的参数与示例", url: "https://kubernetes.io/zh-cn/docs/reference/kubectl/" },
-  { name: "Opspilot-2 故障演练", desc: "Prometheus 到人工审批", url: "../../docs/kind-demo-zh.md" },
+type LabApiResponse = { query: string; ok: boolean; output?: string; error?: string };
+type Incident = {
+  id: string;
+  status: string;
+  severity: string;
+  alert_name?: string;
+  summary?: string;
+  service?: string;
+  created_at?: string;
+};
+type KubernetesItem = {
+  kind: string;
+  metadata?: { name?: string };
+  spec?: { replicas?: number; type?: string; clusterIP?: string; ports?: { port?: number }[]; nodeName?: string };
+  status?: { availableReplicas?: number; readyReplicas?: number; phase?: string; containerStatuses?: { ready?: boolean; restartCount?: number }[] };
+};
+type LessonProgress = {
+  concept: boolean;
+  commands: string[];
+  verified: boolean;
+  quiz: boolean;
+  completed: boolean;
+};
+
+const progressKey = "opspilot-learning-progress-v3";
+const emptyProgress: LessonProgress = {
+  concept: false,
+  commands: [],
+  verified: false,
+  quiz: false,
+  completed: false,
+};
+const baseResources: Resource[] = [
+  { kind: "Deployment", name: "hello-web", status: "等待同步", detail: "点击连接实机读取状态", tone: "muted" },
+  { kind: "Service", name: "hello-web", status: "模拟数据", detail: "ClusterIP · port 80", tone: "good" },
+  { kind: "Pod", name: "hello-web-example-a", status: "Pending", detail: "示例：等待容器启动", tone: "warn" },
+  { kind: "Pod", name: "hello-web-example-b", status: "Pending", detail: "示例：等待容器启动", tone: "warn" },
 ];
 const mockEvents = [
-  { tone: "warn", title: "Failed to pull image", detail: "nginx:1.27-alpine · hello-web", time: "2 分钟前" },
-  { tone: "good", title: "Service created", detail: "hello-web · ClusterIP 10.96.42.19", time: "4 分钟前" },
-  { tone: "muted", title: "Deployment applied", detail: "hello-web · replicas 2", time: "4 分钟前" },
+  { tone: "warn", title: "镜像拉取示例", detail: "Failed to pull image · 这是教学模拟数据", time: "模拟" },
+  { tone: "good", title: "Service 创建示例", detail: "hello-web · ClusterIP", time: "模拟" },
 ];
 const mockLogs = [
-  "2026-09-05T16:42:01Z  nginx  starting worker process",
-  "2026-09-05T16:42:02Z  kubelet  readiness probe pending",
-  "2026-09-05T16:42:33Z  kubelet  Failed to pull image nginx:1.27-alpine",
+  "[模拟日志] nginx starting worker process",
+  "[模拟日志] readiness probe pending",
+  "[提示] 点击“连接实机”读取 k8s-lab 的真实日志",
+];
+const docs = [
+  { name: "Kubernetes 中文文档", desc: "概念、教程与任务", url: "https://kubernetes.io/zh-cn/docs/home/" },
+  { name: "Docker 官方文档", desc: "镜像、容器和网络", url: "https://docs.docker.com/" },
+  { name: "Kind Quick Start", desc: "本地 Kubernetes 集群", url: "https://kind.sigs.k8s.io/docs/user/quick-start/" },
+  { name: "kubectl 命令参考", desc: "命令参数和示例", url: "https://kubernetes.io/zh-cn/docs/reference/kubectl/" },
 ];
 
-function simulatedOutput(input: string): string {
-  const command = input.trim().replace(/\s+/g, " ");
-  if (!command) return "";
-  if (command === "clear") return "__CLEAR__";
-  if (command === "help") return "可用查询：docker --version · docker image ls · docker ps · kind version · kubectl version --client · kubectl config current-context · kubectl get nodes · kubectl get pods";
-  if (command === "docker --version") return "Docker version 29.7.2";
-  if (command === "docker image ls") return "REPOSITORY   TAG       IMAGE ID   CREATED   SIZE\nhello-world  latest    54c9d81    2 weeks   10.3kB";
-  if (command === "docker ps") return "CONTAINER ID   IMAGE   STATUS\n(没有正在运行的容器)";
-  if (command === "kind version") return "kind v0.29.0 go1.24.4 darwin/arm64";
-  if (command === "kubectl version --client") return "Client Version: v1.34.1";
-  if (command === "kubectl config current-context") return "kind-k8s-lab";
-  if (command === "kubectl get nodes") return "NAME                  STATUS   ROLES           AGE\nk8s-lab-control-plane   Ready    control-plane   18h";
-  if (command === "kubectl get namespaces") return "NAME      STATUS\ndefault   Active\nlearning  Active";
-  if (command === "kubectl get pods" || command === "kubectl -n learning get pods") return "NAME                       READY   STATUS    RESTARTS   AGE\nhello-web-547fffd4fc-b4mnv   1/1     Running   0          18h\nhello-web-547fffd4fc-j4qrt   1/1     Running   0          18h";
-  if (command === "kubectl -n learning get deployment") return "NAME        READY   UP-TO-DATE   AVAILABLE   AGE\nhello-web   2/2     2            2           18h";
-  if (command === "kubectl -n learning get service") return "NAME        TYPE        CLUSTER-IP      PORT(S)\nhello-web   ClusterIP   10.96.254.242   80/TCP";
-  if (command.startsWith("kubectl ") || command.startsWith("docker ") || command.startsWith("kind ")) return "已拦截：这条命令不在安全查询白名单中。可以输入 help 查看可用命令。";
-  return "已拦截：工作台不会执行未知命令，只模拟安全的只读查询。输入 help 查看可用命令。";
+function loadProgress(): Record<string, LessonProgress> {
+  try {
+    const saved = JSON.parse(localStorage.getItem(progressKey) ?? "{}");
+    return typeof saved === "object" && saved ? saved : {};
+  } catch {
+    return {};
+  }
 }
 
-function loadProgress(): Record<string, LabState> {
-  try {
-    const value = JSON.parse(localStorage.getItem("opspilot-learning-progress") ?? "{}");
-    return typeof value === "object" && value ? value : {};
-  } catch { return {}; }
+function parseKubernetesResources(output: string): Resource[] {
+  const payload = JSON.parse(output) as { items?: KubernetesItem[] };
+  return (payload.items ?? []).map((item) => {
+    const name = item.metadata?.name ?? "未命名资源";
+    if (item.kind === "Deployment") {
+      const desired = item.spec?.replicas ?? 0;
+      const ready = item.status?.readyReplicas ?? item.status?.availableReplicas ?? 0;
+      return { kind: "Deployment", name, status: ready === desired ? "Available" : "Progressing", detail: `${ready}/${desired} 副本可用`, tone: ready === desired ? "good" : "warn" };
+    }
+    if (item.kind === "Pod") {
+      const containers = item.status?.containerStatuses ?? [];
+      const ready = containers.filter((container) => container.ready).length;
+      const restarts = containers.reduce((total, container) => total + (container.restartCount ?? 0), 0);
+      const phase = item.status?.phase ?? "Unknown";
+      return { kind: "Pod", name, status: phase, detail: `${ready}/${containers.length || 1} 容器就绪 · 重启 ${restarts} 次`, tone: phase === "Running" && ready === containers.length ? "good" : "warn" };
+    }
+    const port = item.spec?.ports?.[0]?.port;
+    return { kind: item.kind || "Service", name, status: item.spec?.type ?? "Unknown", detail: `${item.spec?.clusterIP ?? "无 ClusterIP"}${port ? ` · 端口 ${port}` : ""}`, tone: "good" };
+  });
 }
 
 function App() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [view, setView] = useState<View>("overview");
-  const [selectedLab, setSelectedLab] = useState("00");
-  const [progress, setProgress] = useState<Record<string, LabState>>(loadProgress);
+  const [selectedId, setSelectedId] = useState("00");
+  const [progress, setProgress] = useState<Record<string, LessonProgress>>(loadProgress);
   const [resources, setResources] = useState(baseResources);
   const [events, setEvents] = useState(mockEvents);
   const [logs, setLogs] = useState(mockLogs);
   const [connection, setConnection] = useState<ConnectionState>("mock");
+  const [terminalLines, setTerminalLines] = useState<string[]>([
+    "欢迎来到安全练习终端。",
+    "输入 help 查看可用方式；这里不会执行真实写操作。",
+  ]);
+  const [terminalInput, setTerminalInput] = useState("");
+  const [notice, setNotice] = useState("从第 1 课开始：先读概念，再执行三条命令。无需提前了解 Kubernetes。");
   const [showDocs, setShowDocs] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
-  const [command, setCommand] = useState(stageCommands["00"][0]);
-  const [terminalInput, setTerminalInput] = useState("");
-  const [terminalLines, setTerminalLines] = useState<string[]>(["$ kubectl config current-context", "kind-k8s-lab", "$ kubectl get nodes", "k8s-lab-control-plane   Ready   control-plane   3m"]);
-  const [notice, setNotice] = useState("从环境检查开始，完成每一关后再解锁下一关");
-  const selected = labs.find((lab) => lab.id === selectedLab) ?? labs[0];
-  const availableCommands = stageCommands[selectedLab] ?? stageCommands["00"];
-  const doneCount = labs.filter((lab) => progress[lab.id] === "done").length;
-  const readyCount = resources.filter((item) => item.tone === "good").length;
-  const stateOf = (id: string): LabState => progress[id] ?? (id === selectedLab ? "active" : "todo");
-  useEffect(() => { localStorage.setItem("opspilot-learning-progress", JSON.stringify(progress)); }, [progress]);
+
+  const selected = lessons.find((lesson) => lesson.id === selectedId) ?? lessons[0];
+  const currentProgress = progress[selected.id] ?? emptyProgress;
+  const selectedIndex = lessons.findIndex((lesson) => lesson.id === selected.id);
+  const doneCount = lessons.filter((lesson) => progress[lesson.id]?.completed).length;
+
+  useEffect(() => {
+    localStorage.setItem(progressKey, JSON.stringify(progress));
+  }, [progress]);
+
+  const updateCurrent = (patch: Partial<LessonProgress>) => {
+    setProgress((current) => ({
+      ...current,
+      [selected.id]: { ...(current[selected.id] ?? emptyProgress), ...patch },
+    }));
+  };
+
+  const lessonUnlocked = (index: number) => index === 0 || Boolean(progress[lessons[index - 1].id]?.completed);
+
+  const selectLesson = (lesson: Lesson, index: number) => {
+    if (!lessonUnlocked(index)) {
+      setNotice(`第 ${index + 1} 课还没有解锁，请先完成第 ${index} 课。`);
+      return;
+    }
+    setSelectedId(lesson.id);
+    setView("learn");
+    setMobileNav(false);
+    setNotice(`当前是第 ${index + 1} 课：${lesson.title}。先阅读“为什么要学”，再按顺序操作。`);
+  };
+
+  const appendCommand = (command: string, output: string) => {
+    setTerminalLines((lines) => [...lines, `$ ${command}`, output]);
+  };
+
+  const runCourseCommand = (command: string) => {
+    const result = runSimulatedCommand(command);
+    appendCommand(command, result.output);
+    if (result.ok) {
+      const executed = Array.from(new Set([...currentProgress.commands, command]));
+      updateCurrent({ commands: executed, verified: false });
+      setNotice(
+        executed.length === selected.commands.length
+          ? "三条命令都已执行。下一步：点击“运行自检”。"
+          : `已完成 ${executed.length}/${selected.commands.length} 条命令，请继续执行下一条。`,
+      );
+    }
+  };
+
+  const runTerminalInput = () => {
+    const command = terminalInput.trim();
+    if (!command) return;
+    const result = runSimulatedCommand(command);
+    setTerminalInput("");
+    if (result.output === "__CLEAR__") {
+      setTerminalLines([]);
+      setNotice("终端已清空。课程进度不会被清除。 ");
+      return;
+    }
+    appendCommand(command, result.output);
+    const courseCommand = selected.commands.some((item) => item.command === command);
+    if (result.ok && courseCommand) {
+      const executed = Array.from(new Set([...currentProgress.commands, command]));
+      updateCurrent({ commands: executed, verified: false });
+    }
+    setNotice(result.ok ? "命令已运行。请对照课程里的“预期看到”理解输出。" : "命令已安全拦截，没有在本机执行。输入 help 查看说明。");
+  };
+
+  const runSelfCheck = () => {
+    const transcript = terminalLines.join("\n");
+    const missing = selected.evidence.filter((needle) => !transcript.includes(needle));
+    if (missing.length) {
+      updateCurrent({ verified: false });
+      setNotice(`自检还没通过：缺少 ${missing.join("、")}。请把本节三条命令全部执行一次。`);
+      return;
+    }
+    updateCurrent({ verified: true });
+    setNotice("自检通过。下一步：完成下方的一道小测。答错也可以重新选择。");
+  };
+
+  const nextAction = useMemo(() => {
+    if (!currentProgress.concept) return "先阅读本节概念，然后点击“我看懂了”";
+    if (currentProgress.commands.length < selected.commands.length) return "按顺序执行本节的三条命令";
+    if (!currentProgress.verified) return "点击“运行自检”，确认输出包含关键证据";
+    if (!currentProgress.quiz) return "完成本节小测，确认概念已经理解";
+    if (!currentProgress.completed) return "点击“完成本节”，解锁下一课";
+    return selectedIndex === lessons.length - 1 ? "全部课程完成，可以进入集群资源和事故中心练习" : "选择下一课继续学习";
+  }, [currentProgress, selected, selectedIndex]);
+
+  const completeLesson = () => {
+    if (!currentProgress.concept || currentProgress.commands.length < selected.commands.length || !currentProgress.verified || !currentProgress.quiz) {
+      setNotice(`还不能完成本节。当前需要：${nextAction}。`);
+      return;
+    }
+    updateCurrent({ completed: true });
+    const next = lessons[selectedIndex + 1];
+    if (next) {
+      setSelectedId(next.id);
+      setNotice(`第 ${selectedIndex + 1} 课已完成。已进入第 ${selectedIndex + 2} 课：${next.title}。`);
+    } else {
+      setNotice("五课全部完成。现在可以进入“集群资源”观察真实状态，再到“事故中心”理解 Opspilot。");
+    }
+  };
 
   const fetchLabQuery = async (query: string) => {
     const response = await fetch(`${import.meta.env.VITE_LAB_API_URL ?? "http://127.0.0.1:8787"}/?query=${query}`);
     const payload = (await response.json()) as LabApiResponse;
-    if (!response.ok || !payload.ok || !payload.output) throw new Error(payload.error ?? `${query} unavailable`);
+    if (!response.ok || !payload.ok || payload.output === undefined) throw new Error(payload.error ?? `${query} unavailable`);
     return payload.output;
   };
+
   const connectLive = async () => {
     setConnection("connecting");
     try {
-      const [resourceOutput, eventOutput, logOutput] = await Promise.all([fetchLabQuery("resources"), fetchLabQuery("events"), fetchLabQuery("logs")]);
-      const ready = /hello-web\s+2\/2\s+2\s+2/.test(resourceOutput);
-      setResources((items) => items.map((item) => {
-        if (item.kind === "Service") return { ...item, status: "ClusterIP", detail: "read from k8s-lab · port 80", tone: "good" };
-        if (ready) return { ...item, status: item.kind === "Deployment" ? "Available" : "Running", detail: item.kind === "Deployment" ? "2/2 available · read from k8s-lab" : "Running · read from k8s-lab", tone: "good" };
-        return item;
-      }));
+      const [resourceOutput, eventOutput, logOutput] = await Promise.all([
+        fetchLabQuery("resources"),
+        fetchLabQuery("events"),
+        fetchLabQuery("logs"),
+      ]);
+      const parsedResources = parseKubernetesResources(resourceOutput);
+      if (!parsedResources.length) throw new Error("no resources returned");
+      setResources(parsedResources);
       const eventRows = eventOutput.split("\n").filter((line) => line.trim() && !line.startsWith("LAST SEEN"));
-      if (eventRows.length) setEvents(eventRows.slice(-5).reverse().map((line, index) => ({ tone: line.includes("Failed") ? "warn" : "muted", title: line.includes("Failed") ? "Failed to pull image" : "集群事件", detail: line.trim(), time: `${index + 1} 分钟前` })));
-      if (logOutput.trim()) setLogs(logOutput.split("\n").filter(Boolean));
-      setConnection("live"); setNotice("已连接 k8s-lab，只读状态已更新");
-    } catch { setConnection("error"); setNotice("无法连接只读 API，当前保留模拟数据；启动 lab-api 后可重试"); }
+      setEvents(eventOutput.startsWith("No resources found") ? [] : eventRows.slice(-8).reverse().map((line) => ({
+        tone: line.includes("Warning") || line.includes("Failed") ? "warn" : "muted",
+        title: line.includes("Failed") ? "集群警告" : "集群事件",
+        detail: line,
+        time: "实机",
+      })));
+      setLogs(logOutput.trim() ? logOutput.split("\n").filter(Boolean) : ["当前容器没有日志输出。"]);
+      setConnection("live");
+      setNotice("已连接学习集群。当前页面只读取状态、事件和日志，不执行修改。 ");
+    } catch {
+      setConnection("error");
+      setNotice("连接失败。请用桌面图标重新打开工作台；启动器会同时启动只读桥接服务。 ");
+    }
   };
-  const runCommand = () => {
-    const output = simulatedOutput(command);
-    setTerminalLines((lines) => [...lines, `$ ${command}`, output]); setNotice(output.startsWith("已拦截") ? "命令被安全边界拦截" : "命令已执行，输出已追加到终端");
-  };
-  const runTerminalInput = () => { const input = terminalInput.trim(); if (!input) return; const output = simulatedOutput(input); if (output === "__CLEAR__") { setTerminalLines([]); setTerminalInput(""); setNotice("终端已清空"); return; } setTerminalLines((lines) => [...lines, `$ ${input}`, output]); setTerminalInput(""); setNotice(output.startsWith("已拦截") ? "命令被安全边界拦截" : "命令已执行，输出已追加到终端"); };
-  const completeLab = () => {
-    setProgress((current) => ({ ...current, [selectedLab]: "done" }));
-    const next = labs.find((lab) => Number(lab.id) > Number(selectedLab) && stateOf(lab.id) !== "done");
-    if (next) { setSelectedLab(next.id); setCommand((stageCommands[next.id] ?? stageCommands["00"])[0]); setNotice(`阶段 ${selectedLab} 已完成，已解锁阶段 ${next.id}`); } else setNotice("全部学习阶段已完成");
-  };
-  const resetProgress = () => { localStorage.removeItem("opspilot-learning-progress"); setProgress({}); setSelectedLab("00"); setCommand(stageCommands["00"][0]); setView("learn"); setShowReset(false); setNotice("学习进度已重置，从阶段 00 开始"); };
-  const selfCheck = () => { const evidence = selectedLab === "00" ? terminalLines.some((line) => line.includes("Docker version") || line.includes("kind v") || line.includes("Client Version")) : selectedLab === "01" ? terminalLines.some((line) => line.includes("Hello from Docker")) : selectedLab === "02" ? terminalLines.some((line) => line.includes("kind-k8s-lab") && line.includes("Ready")) : selectedLab === "03" ? terminalLines.some((line) => line.includes("hello-web")) : terminalLines.some((line) => line.includes("events") || line.includes("Running") || line.includes("nginx")); setNotice(evidence ? "自检通过：已找到本阶段关键证据，可以完成本节" : "还缺少本阶段证据：先执行右侧命令，再运行自检"); };
-  const connectionLabel = connection === "connecting" ? "连接中" : connection === "live" ? "实机只读" : connection === "error" ? "连接失败" : "本地模拟";
-  const selectView = (next: View) => { setView(next); setMobileNav(false); };
 
-  return <div className={`app-shell ${theme}`}>
-    <header className="topbar"><button className="mobile-menu icon-button" aria-label="打开导航" onClick={() => setMobileNav((open) => !open)}><Menu size={19} /></button><div className="brand"><div className="brand-mark"><Layers3 size={17} /></div><div><strong>Opspilot</strong><span>学习工作台</span></div></div><div className="context-pill"><span className="pulse" /><span>学习集群</span><code>kind-k8s-lab</code><ChevronRight size={14} /></div><div className="top-actions"><span className={`sync-status ${connection}`}><Activity size={14} /> {connectionLabel}</span><button className="connect-btn" onClick={connectLive} disabled={connection === "connecting"}><PlugZap size={14} /><span>{connection === "live" ? "刷新实机" : "连接实机"}</span></button><button className="icon-button" aria-label={theme === "light" ? "切换深色模式" : "切换浅色模式"} onClick={() => setTheme((current) => current === "light" ? "dark" : "light")}>{theme === "light" ? <Moon size={18} /> : <Sun size={18} />}</button><button className="icon-button" aria-label="打开官方文档" onClick={() => setShowDocs(true)}><BookOpen size={18} /></button><div className="avatar">孔</div></div></header>
-    <div className="layout"><aside className={`sidebar ${mobileNav ? "mobile-open" : ""}`}><div className="side-heading"><span>工作台</span><button className="sidebar-close icon-button" aria-label="关闭导航" onClick={() => setMobileNav(false)}><X size={16} /></button></div><nav className="primary-nav" aria-label="工作台模块"><button className={view === "overview" ? "nav-item active" : "nav-item"} onClick={() => selectView("overview")}><Gauge size={15} />概览<span>Overview</span></button><button className={view === "learn" ? "nav-item active" : "nav-item"} onClick={() => selectView("learn")}><ListChecks size={15} />学习路径<span>{doneCount}/{labs.length}</span></button><button className={view === "cluster" ? "nav-item active" : "nav-item"} onClick={() => selectView("cluster")}><Server size={15} />集群资源<span>Cluster</span></button><button className={view === "incidents" ? "nav-item active" : "nav-item"} onClick={() => selectView("incidents")}><AlertCircle size={15} />事故中心<span>Opspilot</span></button></nav><div className="side-divider" /><div className="side-heading path-heading"><span>学习阶段</span><span className="progress">{doneCount}/{labs.length}</span></div><div className="path-track" /><nav className="lab-list" aria-label="学习阶段">{labs.map((lab) => { const state = stateOf(lab.id); const locked = state === "todo" && Number(lab.id) > doneCount; return <button key={lab.id} className={`lab-item ${selectedLab === lab.id ? "selected" : ""} ${state}`} onClick={() => { if (!locked) { setSelectedLab(lab.id); setView("learn"); setMobileNav(false); } }} disabled={locked}><span className="lab-index">{state === "done" ? <Check size={14} /> : lab.id}</span><span className="lab-copy"><strong>{lab.title}</strong><small>{lab.subtitle}</small><small className="lab-meta"><Clock3 size={12} /> {lab.duration}</small></span><span className={`lab-state ${state}`}>{state === "done" ? "已完成" : state === "active" ? "进行中" : "未解锁"}</span></button>; })}</nav><div className="sidebar-foot"><ShieldCheck size={15} /><span>安全边界</span><p>只读 <code>k8s-lab</code>，不会修改 Opspilot-2。</p><button className="reset-link" onClick={() => setShowReset(true)}><Trash2 size={12} /> 重置进度</button></div></aside>
-      <main className="main-content">{view === "overview" && <OverviewView doneCount={doneCount} readyCount={readyCount} connection={connection} onLearn={() => selectView("learn")} onCluster={() => selectView("cluster")} onConnect={connectLive} />}{view === "learn" && <LearnView selected={selected} selectedLab={selectedLab} labs={labs} progress={progress} commands={availableCommands} command={command} setCommand={setCommand} runCommand={runCommand} terminalLines={terminalLines} setTerminalLines={setTerminalLines} terminalInput={terminalInput} setTerminalInput={setTerminalInput} runTerminalInput={runTerminalInput} selfCheck={selfCheck} completeLab={completeLab} notice={notice} onGuide={() => setShowDocs(true)} onRecord={() => setNotice("当前阶段状态已记录到本地练习日志")} />}{view === "cluster" && <ClusterView resources={resources} events={events} logs={logs} connection={connection} onConnect={connectLive} onRefresh={connectLive} />}{view === "incidents" && <IncidentView onDocs={() => setShowDocs(true)} />}</main></div>
-    {showReset && <div className="modal-backdrop" onClick={() => setShowReset(false)}><div className="guide-modal confirm-modal" onClick={(event) => event.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">学习进度 / PROGRESS</span><h2>重置学习进度？</h2></div><button className="icon-button" onClick={() => setShowReset(false)} aria-label="关闭"><X size={18} /></button></div><p>这会清除本浏览器保存的 5 个阶段进度，集群资源和代码不会受到影响。</p><div className="modal-actions"><button className="secondary-btn" onClick={() => setShowReset(false)}>取消</button><button className="danger-btn" onClick={resetProgress}><Trash2 size={14} />确认重置</button></div></div></div>}
-    {showDocs && <div className="modal-backdrop" onClick={() => setShowDocs(false)}><div className="guide-modal docs-modal" onClick={(event) => event.stopPropagation()}><div className="modal-head"><div><span className="eyebrow">官方资料 / REFERENCES</span><h2>随时查文档</h2></div><button className="icon-button" onClick={() => setShowDocs(false)} aria-label="关闭"><X size={18} /></button></div><p>遇到不会的命令先查权威资料。外部页面只读打开，不会把 Token 或内部地址带出工作台。</p><div className="docs-list">{docs.map((doc) => <a key={doc.url} className="doc-link" href={doc.url} target="_blank" rel="noreferrer"><BookOpen size={15} /><span><strong>{doc.name}</strong><small>{doc.desc}</small></span><ExternalLink size={14} /></a>)}</div></div></div>}
-  </div>;
+  const resetProgress = () => {
+    localStorage.removeItem(progressKey);
+    setProgress({});
+    setSelectedId("00");
+    setTerminalLines(["学习进度已重置。输入 help 查看终端说明。"]);
+    setView("learn");
+    setShowReset(false);
+    setNotice("已从零开始。第一步：阅读 Docker、Kind、kubectl 的通俗解释。 ");
+  };
+
+  const selectView = (next: View) => {
+    setView(next);
+    setMobileNav(false);
+  };
+
+  const connectionLabel = connection === "connecting" ? "正在连接" : connection === "live" ? "实机只读" : connection === "error" ? "连接失败" : "教学模拟";
+
+  return (
+    <div className={`app-shell ${theme}`}>
+      <header className="topbar">
+        <button className="mobile-menu icon-button" aria-label="打开导航" onClick={() => setMobileNav((open) => !open)}><Menu /></button>
+        <div className="brand"><span className="brand-mark"><Layers3 /></span><div><strong>Opspilot</strong><small>云原生学习工作台</small></div></div>
+        <div className="context-pill"><span className="pulse" /><span>学习集群</span><code>kind-k8s-lab</code></div>
+        <div className="top-actions">
+          <span className={`connection-label ${connection}`} title="教学模拟不会读取集群；实机只读会同步 k8s-lab 状态"><Activity />{connectionLabel}</span>
+          <button className="connect-btn" onClick={connectLive} disabled={connection === "connecting"}><PlugZap />{connection === "live" ? "刷新实机" : "连接实机"}</button>
+          <button className="icon-button" aria-label={theme === "light" ? "切换深色模式" : "切换明亮模式"} onClick={() => setTheme((value) => value === "light" ? "dark" : "light")}>{theme === "light" ? <Moon /> : <Sun />}</button>
+          <button className="icon-button" aria-label="打开术语和学习资料" onClick={() => setShowDocs(true)}><BookOpen /></button>
+        </div>
+      </header>
+
+      <div className="layout">
+        <aside className={`sidebar ${mobileNav ? "mobile-open" : ""}`}>
+          <div className="side-heading"><span>工作台</span><button className="sidebar-close icon-button" aria-label="关闭导航" onClick={() => setMobileNav(false)}><X /></button></div>
+          <nav className="primary-nav" aria-label="工作台模块">
+            <NavButton active={view === "overview"} icon={<Gauge />} label="学习首页" meta="从这里开始" onClick={() => selectView("overview")} />
+            <NavButton active={view === "learn"} icon={<ListChecks />} label="课程练习" meta={`${doneCount}/5`} onClick={() => selectView("learn")} />
+            <NavButton active={view === "cluster"} icon={<Server />} label="集群资源" meta="进阶" onClick={() => selectView("cluster")} />
+            <NavButton active={view === "incidents"} icon={<AlertCircle />} label="事故中心" meta="进阶" onClick={() => selectView("incidents")} />
+          </nav>
+          <div className="side-divider" />
+          <div className="side-heading"><span>五课学习路径</span><span>{doneCount}/5</span></div>
+          <nav className="lesson-nav" aria-label="课程列表">
+            {lessons.map((lesson, index) => {
+              const itemProgress = progress[lesson.id] ?? emptyProgress;
+              const unlocked = lessonUnlocked(index);
+              return (
+                <button key={lesson.id} className={`lesson-nav-item ${selected.id === lesson.id ? "selected" : ""} ${itemProgress.completed ? "done" : ""}`} disabled={!unlocked} onClick={() => selectLesson(lesson, index)}>
+                  <span className="lesson-index">{itemProgress.completed ? <Check /> : index + 1}</span>
+                  <span><strong>{lesson.title}</strong><small>{lesson.subtitle}</small><small><Clock3 />{lesson.duration}</small></span>
+                  <em>{itemProgress.completed ? "完成" : unlocked ? "可学习" : "未解锁"}</em>
+                </button>
+              );
+            })}
+          </nav>
+          <div className="sidebar-foot"><ShieldCheck /><span><strong>安全学习环境</strong><small>终端不会执行真实写操作</small></span><button onClick={() => setShowReset(true)}><Trash2 />重置学习进度</button></div>
+        </aside>
+
+        <main className="main-content">
+          {view === "overview" && <Overview doneCount={doneCount} nextLesson={lessons[Math.min(doneCount, lessons.length - 1)]} connection={connection} onStart={() => doneCount === lessons.length ? selectView("cluster") : selectLesson(lessons[doneCount], doneCount)} onDocs={() => setShowDocs(true)} />}
+          {view === "learn" && <LessonView lesson={selected} index={selectedIndex} progress={currentProgress} notice={notice} nextAction={nextAction} terminalLines={terminalLines} terminalInput={terminalInput} onTerminalInput={setTerminalInput} onRunTerminal={runTerminalInput} onClearTerminal={() => setTerminalLines([])} onConceptRead={() => { updateCurrent({ concept: true }); setNotice("概念阅读完成。现在从上到下执行三条命令，并对照预期输出。 "); }} onRunCommand={runCourseCommand} onSelfCheck={runSelfCheck} onQuizPass={() => { updateCurrent({ quiz: true }); setNotice("小测回答正确。现在可以点击“完成本节”。 "); }} onComplete={completeLesson} onDocs={() => setShowDocs(true)} />}
+          {view === "cluster" && <ClusterView resources={resources} events={events} logs={logs} connection={connection} onConnect={connectLive} />}
+          {view === "incidents" && <IncidentView onDocs={() => setShowDocs(true)} />}
+        </main>
+      </div>
+
+      {showReset && <ConfirmModal onClose={() => setShowReset(false)} onConfirm={resetProgress} />}
+      {showDocs && <ReferenceModal onClose={() => setShowDocs(false)} />}
+    </div>
+  );
 }
 
-function ConceptHint({ stage }: { stage: string }) { const hints: Record<string, [string, string]> = { "00": ["Docker 是应用盒子，Kind 是本机小集群，kubectl 是查看工具。", "先确认这些工具都能工作。"], "01": ["镜像是应用模板，容器是运行中的实例，端口是访问入口。", "先理解关系，再运行第一个容器。"], "02": ["集群是一组机器，节点是其中一台机器，Namespace 是资源分区。", "先看清楚你正在连接哪一个集群。"], "03": ["Deployment 管理目标状态，Pod 运行应用，Service 提供稳定地址。", "先看对象之间如何配合。"], "04": ["状态告诉你发生了什么，事件解释原因，日志提供细节。", "排障要按证据顺序进行。"] }; const hint = hints[stage] ?? hints["00"]; return <div className="concept-hint"><span className="concept-hint-label">概念地图</span><div><strong>{hint[0]}</strong><small>{hint[1]}</small></div></div>; }
-function BeginnerStart() { return <section className="beginner-start" aria-label="新手开始指南"><div className="beginner-intro"><span className="beginner-icon"><CircleHelp size={18} /></span><div><strong>第一次使用？从这里开始</strong><p>你不需要先懂 Kubernetes。先认识 3 个基础概念，再做第一个 10 分钟练习。</p></div></div><div className="concept-list"><div><span>Docker</span><strong>应用的盒子</strong><small>把程序和依赖装在一起。</small></div><div><span>Kind</span><strong>本机练习集群</strong><small>在电脑里模拟 Kubernetes。</small></div><div><span>kubectl</span><strong>控制命令</strong><small>用命令查看和操作集群。</small></div></div><div className="beginner-next"><span className="next-badge">第 1 步</span><strong>点击右上角“继续学习”</strong><span>进入环境检查，不会修改任何真实服务。</span></div></section>; }
-function PageHeader({ eyebrow, title, description, actions }: { eyebrow: string; title: string; description: string; actions?: React.ReactNode }) { const stage = eyebrow.match(/学习阶段 (\d+)/)?.[1]; return <>{eyebrow.startsWith("工作台") && <BeginnerStart />}{stage && <ConceptHint stage={stage} />}<div className="page-head"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div>{actions && <div className="head-actions">{actions}</div>}</div></>; }
-
-function OverviewView({ doneCount, readyCount, connection, onLearn, onCluster, onConnect }: { doneCount: number; readyCount: number; connection: ConnectionState; onLearn: () => void; onCluster: () => void; onConnect: () => void }) { return <><PageHeader eyebrow="工作台 / OVERVIEW" title="学习控制台" description="从概念、命令到真实集群证据，按阶段完成 Kubernetes 实操。" actions={<><button className="secondary-btn" onClick={onCluster}><Server size={15} />查看集群</button><button className="primary-btn" onClick={onLearn}><Play size={15} />继续学习</button></>} /><section className="hero-strip"><div><span className="hero-kicker">BEGINNER → OPERATOR</span><h2>把每一次故障都变成可验证的知识。</h2><p>先在隔离的 k8s-lab 里练习，再通过只读连接观察 Opspilot 的真实证据链。</p></div><div className="hero-progress"><div className="progress-ring"><strong>{doneCount}</strong><span>/ 5</span></div><div><strong>学习进度</strong><small>{doneCount === 0 ? "从环境检查开始" : `已完成 ${doneCount} 个阶段`}</small></div></div></section><section className="overview-grid"><div className="overview-cell"><span>学习进度</span><strong>{doneCount}/5 <span className="muted-text">阶段完成</span></strong><small>完成当前关卡后自动解锁下一关</small></div><div className="overview-cell"><span>集群连接</span><strong className={connection === "live" ? "good-text" : ""}><span className={`status-dot ${connection === "live" ? "good" : "warn"}`} />{connection === "live" ? "实机只读" : "本地模拟"}</strong><small>{connection === "live" ? "k8s-lab · 已同步" : "点击右上角连接实机"}</small></div><div className="overview-cell"><span>学习资源</span><strong><Layers3 size={15} />4 类资源</strong><small>Deployment · Pod · Service · Event</small></div><div className="overview-cell"><span>工作负载</span><strong>{readyCount === 4 ? "2/2" : "0/2"} <span className="muted-text">副本可用</span></strong><small>{readyCount === 4 ? "hello-web 正常" : "等待镜像拉取"}</small></div></section><div className="overview-columns"><section className="panel next-panel"><div className="panel-head"><div><h2>接下来做什么</h2><p>按顺序完成，别跳过证据</p></div><button className="text-btn" onClick={onLearn}>查看路径 <ChevronRight size={14} /></button></div><div className="next-step"><span className="next-index">{String(Math.min(doneCount, 4)).padStart(2, "0")}</span><div><strong>{doneCount === 0 ? "先完成环境检查" : "继续当前学习阶段"}</strong><p>{doneCount === 0 ? "确认 Docker、Kind 和 kubectl 都能工作。" : "执行只读命令，记录状态、事件和日志。"}</p></div><button className="primary-btn" onClick={onLearn}>开始 <ChevronRight size={14} /></button></div></section><section className="panel safety-panel"><div className="panel-head"><div><h2>运行边界</h2><p>当前工作台的安全默认值</p></div><ShieldCheck size={17} className="panel-icon" /></div><div className="safety-list"><div><Check size={14} />默认只读，不执行任意 Shell</div><div><Check size={14} />只连接 <code>kind-k8s-lab</code></div><div><Check size={14} />回滚必须经过 Opspilot 人工审批</div></div><button className="outline-btn full" onClick={onConnect}><PlugZap size={14} />{connection === "live" ? "刷新只读状态" : "连接学习集群"}</button></section></div></>; }
-
-function LearnView({ selected, selectedLab, labs: allLabs, progress, commands: availableCommands, command, setCommand, runCommand, terminalLines, setTerminalLines, terminalInput, setTerminalInput, runTerminalInput, selfCheck, completeLab, notice, onGuide, onRecord }: { selected: Lab; selectedLab: string; labs: Lab[]; progress: Record<string, LabState>; commands: string[]; command: string; setCommand: (value: string) => void; runCommand: () => void; terminalLines: string[]; setTerminalLines: (value: string[] | ((current: string[]) => string[])) => void; terminalInput: string; setTerminalInput: (value: string) => void; runTerminalInput: () => void; selfCheck: () => void; completeLab: () => void; notice: string; onGuide: () => void; onRecord: () => void }) { const isDone = progress[selectedLab] === "done"; return <><PageHeader eyebrow={`学习阶段 ${selectedLab} / ${allLabs.length}`} title={selected.title} description={`${selected.subtitle} · 先观察，再操作，最后完成验收。`} actions={<><button className="secondary-btn" onClick={onGuide}><BookOpen size={15} />本节资料</button><button className="primary-btn" onClick={completeLab} disabled={isDone}><Check size={15} />{isDone ? "已完成" : "完成本节"}</button></>} /><div className="notice" role="status" aria-live="polite"><AlertTriangle size={16} /><span>{notice}</span><button onClick={onRecord}>记录状态</button></div><div className="learn-layout"><section className="panel lesson-panel"><div className="panel-head"><div><h2>本节任务</h2><p>阶段 {selectedLab} · {selected.duration}</p></div><span className={`state-tag ${isDone ? "good" : "warn"}`}><span className="status-dot" />{isDone ? "已完成" : "进行中"}</span></div><div className="lesson-body"><div className="lesson-goal"><span className="goal-icon"><ListChecks size={18} /></span><div><strong>你要掌握什么</strong><p>{selectedLab === "00" ? "确认本机工具可用，并理解 Docker、Kind、kubectl 的分工。" : selectedLab === "01" ? "理解镜像、容器和端口的关系。" : selectedLab === "02" ? "理解 Kind 节点、kubectl context 和 Namespace 的关系。" : selectedLab === "03" ? "理解 Deployment、Pod、Service 的职责和期望状态。" : "学会从状态、事件、日志找到故障证据并恢复。"}</p></div></div><div className="checkpoint-list"><div><span>1</span><div><strong>执行预置或自定义只读命令</strong><small>命令输出会保留在下方终端</small></div></div><div><span>2</span><div><strong>对照资源状态和事件</strong><small>不要只看 Pod 是否 Running</small></div></div><div><span>3</span><div><strong>完成自检并标记本节</strong><small>完成后解锁下一阶段</small></div></div></div><button className="outline-btn" onClick={selfCheck}><ShieldCheck size={14} />运行自检</button></div></section><section className="panel command-panel"><div className="panel-head"><div><h2>练习命令</h2><p>预置命令或自己输入安全查询</p></div><Command size={17} className="panel-icon" /></div><div className="command-body"><label htmlFor="command-select">选择一条命令</label><select id="command-select" value={command} onChange={(event) => setCommand(event.target.value)}>{availableCommands.map((item) => <option key={item}>{item}</option>)}</select><button className="primary-btn full" onClick={runCommand}><Play size={14} />执行命令</button><div className="command-tip"><CircleHelp size={14} /><span>想自己练习？在下方终端输入命令，未知命令会被拦截。</span></div></div></section></div><section className="terminal-panel"><div className="terminal-head"><span><Terminal size={15} /> 实验终端</span><span className="terminal-readonly">安全模拟 · 只读查询</span><button className="terminal-clear" onClick={() => setTerminalLines([])} aria-label="清空终端"><Trash2 size={14} /></button></div><div className="terminal-body">{terminalLines.map((line, index) => <div key={`${line}-${index}`} className={line.startsWith("$") ? "terminal-command" : "terminal-output"}>{line}</div>)}<span className="cursor" /></div><div className="terminal-input-row"><span className="terminal-prompt">$</span><input aria-label="输入安全查询命令" value={terminalInput} onChange={(event) => setTerminalInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") runTerminalInput(); }} placeholder="输入命令，例如 kubectl get pods" /><button className="terminal-run" onClick={runTerminalInput} aria-label="执行输入的命令"><Play size={14} /></button></div></section></>;
+function NavButton({ active, icon, label, meta, onClick }: { active: boolean; icon: React.ReactNode; label: string; meta: string; onClick: () => void }) {
+  return <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick}>{icon}<span>{label}</span><small>{meta}</small></button>;
 }
 
-function ClusterView({ resources, events, logs, connection, onConnect, onRefresh }: { resources: Resource[]; events: { tone: string; title: string; detail: string; time: string }[]; logs: string[]; connection: ConnectionState; onConnect: () => void; onRefresh: () => void }) { const [tab, setTab] = useState<"resources" | "events" | "logs">("resources"); return <><PageHeader eyebrow="集群 / CLUSTER" title="集群资源" description="观察 k8s-lab 的工作负载、事件和日志，所有查询都是只读。" actions={<><button className="secondary-btn" onClick={onRefresh}><RefreshCw size={15} />刷新</button><button className="primary-btn" onClick={onConnect}><PlugZap size={15} />{connection === "live" ? "实机已连接" : "连接实机"}</button></>} /><div className="cluster-banner"><div><span className="status-dot good" />{connection === "live" ? "k8s-lab 实机状态" : "k8s-lab 模拟状态"}<small>kind-k8s-lab · namespace learning</small></div><div className="cluster-meta"><span>Docker Engine</span><strong>29.7.2</strong><span>节点</span><strong>1 Ready</strong></div></div><div className="tab-bar" role="tablist">{(["resources", "events", "logs"] as const).map((item) => <button key={item} role="tab" aria-selected={tab === item} className={tab === item ? "tab active" : "tab"} onClick={() => setTab(item)}>{item === "resources" ? <><Server size={14} />资源清单</> : item === "events" ? <><AlertTriangle size={14} />集群事件</> : <><FileCode2 size={14} />容器日志</>}</button>)}</div>{tab === "resources" && <ResourceTable resources={resources} />}{tab === "events" && <EventList events={events} />}{tab === "logs" && <LogPanel logs={logs} />}</>; }
-function ResourceTable({ resources }: { resources: Resource[] }) { const [onlyIssues, setOnlyIssues] = useState(false); const visible = onlyIssues ? resources.filter((resource) => resource.tone === "warn") : resources; return <section className="panel resource-panel"><div className="panel-head"><div><h2>资源清单</h2><p>Namespace / learning · read-only</p></div><button className="filter-btn" onClick={() => setOnlyIssues((current) => !current)}><Search size={14} />{onlyIssues ? "显示全部" : "只看异常"} <ChevronRight size={14} /></button></div><div className="resource-table"><div className="table-row table-header"><span>类型</span><span>名称</span><span>状态</span><span>详情</span></div>{visible.map((resource) => <div className="table-row" key={resource.name}><span className="resource-kind"><span className="kind-icon"><Server size={14} /></span>{resource.kind}</span><strong>{resource.name}</strong><span className={`state-tag ${resource.tone}`}><span className="status-dot" />{resource.status}</span><span className="resource-detail">{resource.detail}</span></div>)}</div><div className="panel-foot"><span>数据来源：k8s-lab · 只读快照</span><span className="snapshot-label"><ExternalLink size={13} />YAML 只读快照</span></div></section>; }
-function EventList({ events }: { events: { tone: string; title: string; detail: string; time: string }[] }) { return <section className="panel event-panel"><div className="panel-head"><div><h2>集群事件</h2><p>按时间排序 · evidence</p></div><span className="filter-note">最近 {events.length} 条</span></div><div className="timeline">{events.map((event, index) => <div className="event" key={`${event.title}-${index}`}><span className="event-line" /><span className={`event-icon ${event.tone}`}><AlertTriangle size={13} /></span><div><strong>{event.title}</strong><p>{event.detail}</p><time>{event.time}</time></div></div>)}</div></section>; }
-function LogPanel({ logs }: { logs: string[] }) { return <section className="panel logs-panel"><div className="panel-head"><div><h2>容器日志</h2><p>hello-web · 最近 20 行</p></div><Terminal size={17} className="panel-icon" /></div><div className="log-output">{logs.map((line) => <div key={line}>{line}</div>)}</div><div className="panel-foot"><span>日志已脱敏 · 只读</span></div></section>; }
-function IncidentView({ onDocs }: { onDocs: () => void }) { const [state, setState] = useState<"idle" | "loading" | "live" | "error">("idle"); const [incidents, setIncidents] = useState<Incident[]>([]); const [message, setMessage] = useState(""); const loadIncidents = async () => { setState("loading"); setMessage(""); try { const base = import.meta.env.VITE_OPSPILOT_API_URL ?? "http://127.0.0.1:8000"; const health = await fetch(`${base}/health`); if (!health.ok) throw new Error("health check failed"); const response = await fetch(`${base}/incidents`); if (!response.ok) throw new Error("incident list failed"); const payload = await response.json(); setIncidents(Array.isArray(payload) ? payload : payload.incidents ?? []); setState("live"); } catch { setState("error"); setMessage("无法连接 Opspilot API。请先运行 make run，或继续使用本地学习集群练习。"); } }; return <><PageHeader eyebrow="事故中心 / OPSPILOT" title="事故响应" description="把告警、调查证据和人工审批放在同一条可追溯流程里。" actions={<><button className="secondary-btn" onClick={onDocs}><BookOpen size={15} />查看流程文档</button><button className="primary-btn" onClick={loadIncidents} disabled={state === "loading"}><RefreshCw size={14} />{state === "loading" ? "连接中" : state === "live" ? "刷新事故" : "连接 Opspilot"}</button></>} />{state === "error" && <div className="notice error" role="alert"><AlertCircle size={16} /><span>{message}</span></div>}{incidents.length === 0 ? <section className="incident-empty"><div className="incident-icon"><ShieldCheck size={22} /></div><h2>{state === "live" ? "当前没有事故" : "连接后查看事故"}</h2><p>连接本机 Opspilot API 后，这里会显示 Alertmanager 告警、调查 Job、修复提案和审计时间线。工作台只读取状态，不替你执行变更。</p><div className="incident-flow"><span><AlertCircle size={15} />告警</span><ChevronRight size={14} /><span><Activity size={15} />调查</span><ChevronRight size={14} /><span><ShieldCheck size={15} />审批</span><ChevronRight size={14} /><span><Check size={15} />验证</span></div><button className="outline-btn" onClick={onDocs}><BookOpen size={14} />先看 Opspilot 流程</button></section> : <section className="panel incident-list"><div className="panel-head"><div><h2>事故列表</h2><p>只读同步 · {incidents.length} 条记录</p></div><span className="live-tag"><span className="status-dot good" />API 已连接</span></div>{incidents.map((incident) => <div className="incident-row" key={incident.id}><span className="incident-severity">{incident.severity || "告警"}</span><div><strong>{incident.title || incident.id}</strong><small>{incident.id} · {incident.created_at || "时间未知"}</small></div><span className="state-tag warn">{incident.status || "received"}</span></div>)}</section>}<section className="ops-boundary"><div><ShieldCheck size={17} /><div><strong>人工审批门</strong><p>工作台不会替你执行回滚。真实 Opspilot 提案必须经过服务端身份验证、作用域匹配和人工批准。</p></div></div><code>proposal → approval → execute</code></section></>; }
+function Overview({ doneCount, nextLesson, connection, onStart, onDocs }: { doneCount: number; nextLesson: Lesson; connection: ConnectionState; onStart: () => void; onDocs: () => void }) {
+  const allDone = doneCount === lessons.length;
+  return (
+    <>
+      <section className="start-panel">
+        <div className="start-copy"><span className="start-label">零基础学习模式</span><h1>{doneCount === 0 ? "先别碰集群，从三个工具开始。" : allDone ? "五课已完成，开始观察真实集群。" : `继续第 ${doneCount + 1} 课：${nextLesson.title}`}</h1><p>每一课都会先解释概念，再让你执行命令、检查结果和完成小测。看不懂的词可以随时打开右上角的术语表。</p><div className="start-actions"><button className="primary-btn large" onClick={onStart}><Play />{doneCount === 0 ? "开始第 1 课" : allDone ? "查看集群资源" : "继续学习"}</button><button className="secondary-btn large" onClick={onDocs}><BookOpen />先看术语表</button></div></div>
+        <div className="today-task"><span>你现在只需要做一件事</span><strong>{doneCount === 0 ? "认识 Docker、Kind 和 kubectl" : allDone ? "连接 k8s-lab，比较资源、事件和日志" : nextLesson.outcome}</strong><small>{allDone ? "进入进阶实战 · 仍然保持只读" : `预计 ${nextLesson.duration} · 不会操作真实生产环境`}</small></div>
+      </section>
+
+      <section className="how-it-works" aria-labelledby="how-title"><div className="section-heading"><span>先建立整体认识</span><h2 id="how-title">这些东西是怎么连在一起的？</h2></div><div className="system-flow"><div><span>1</span><strong>你的应用</strong><small>代码和依赖</small></div><ChevronRight /><div><span>2</span><strong>Docker</strong><small>装进容器</small></div><ChevronRight /><div><span>3</span><strong>Kind</strong><small>创建本地集群</small></div><ChevronRight /><div><span>4</span><strong>Kubernetes</strong><small>管理应用运行</small></div><ChevronRight /><div><span>5</span><strong>Opspilot</strong><small>观察和处理故障</small></div></div></section>
+
+      <section className="course-outline"><div className="section-heading"><span>完整路线</span><h2>五节课，从不会到能排障</h2><p>不要跳课。每节课只引入下一步真正需要的概念。</p></div><div className="course-list">{lessons.map((lesson, index) => <div key={lesson.id} className={index < doneCount ? "complete" : index === doneCount ? "current" : "future"}><span>{index < doneCount ? <Check /> : index + 1}</span><div><strong>{lesson.title}</strong><small>{lesson.outcome}</small></div><em>{lesson.duration}</em></div>)}</div></section>
+
+      <section className="status-strip"><div><span>学习进度</span><strong>{doneCount}/5 课完成</strong></div><div><span>当前数据</span><strong>{connection === "live" ? "学习集群实机只读" : "安全教学模拟"}</strong></div><div><span>操作边界</span><strong>写操作必须人工审批</strong></div></section>
+    </>
+  );
+}
+
+function LessonView({ lesson, index, progress, notice, nextAction, terminalLines, terminalInput, onTerminalInput, onRunTerminal, onClearTerminal, onConceptRead, onRunCommand, onSelfCheck, onQuizPass, onComplete, onDocs }: { lesson: Lesson; index: number; progress: LessonProgress; notice: string; nextAction: string; terminalLines: string[]; terminalInput: string; onTerminalInput: (value: string) => void; onRunTerminal: () => void; onClearTerminal: () => void; onConceptRead: () => void; onRunCommand: (command: string) => void; onSelfCheck: () => void; onQuizPass: () => void; onComplete: () => void; onDocs: () => void }) {
+  const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
+  useEffect(() => setQuizAnswer(null), [lesson.id]);
+  const quizWrong = quizAnswer !== null && quizAnswer !== lesson.quiz.correct;
+  const allCommands = progress.commands.length === lesson.commands.length;
+  return (
+    <>
+      <header className="lesson-header"><div><span>第 {index + 1} 课，共 5 课</span><h1>{lesson.title}</h1><p>{lesson.outcome}</p></div><button className="secondary-btn" onClick={onDocs}><BookOpen />查术语</button></header>
+      <div className="next-action" role="status"><span>现在做什么</span><strong>{nextAction}</strong><em>{notice}</em></div>
+      <div className="lesson-stepper"><span className={progress.concept ? "done" : "active"}>1 看懂概念</span><span className={progress.commands.length ? allCommands ? "done" : "active" : ""}>2 执行命令</span><span className={progress.verified ? "done" : allCommands ? "active" : ""}>3 检查结果</span><span className={progress.quiz ? "done" : progress.verified ? "active" : ""}>4 完成小测</span></div>
+
+      <section className="lesson-section"><div className="step-number">1</div><div className="lesson-section-body"><div className="section-heading"><span>先看懂</span><h2>为什么要学这一课？</h2><p>{lesson.why}</p></div><div className="concept-grid">{lesson.concepts.map((concept) => <article key={concept.term}><strong>{concept.term}</strong><span>{concept.plain}</span><p>{concept.detail}</p></article>)}</div><button className={progress.concept ? "done-btn" : "primary-btn"} onClick={onConceptRead}><Check />{progress.concept ? "概念已读懂" : "我看懂了，继续操作"}</button></div></section>
+
+      <section className="lesson-section"><div className="step-number">2</div><div className="lesson-section-body"><div className="section-heading"><span>跟着做</span><h2>按顺序执行三条命令</h2><p>点击“运行”，然后看下方终端。重点不是背命令，而是理解每条命令在问什么。</p></div><div className="command-list">{lesson.commands.map((item, commandIndex) => { const executed = progress.commands.includes(item.command); return <div key={item.command} className={executed ? "executed" : ""}><span className="command-index">{executed ? <Check /> : commandIndex + 1}</span><div><code>{item.command}</code><strong>{item.purpose}</strong><small>预期看到：{item.expected}</small></div><button onClick={() => onRunCommand(item.command)}><Play />{executed ? "再运行" : "运行"}</button></div>; })}</div></div></section>
+
+      <TerminalPanel lines={terminalLines} input={terminalInput} onInput={onTerminalInput} onRun={onRunTerminal} onClear={onClearTerminal} />
+
+      <section className="lesson-section"><div className="step-number">3</div><div className="lesson-section-body"><div className="section-heading"><span>检查结果</span><h2>确认你真的得到了关键证据</h2><p>自检会在终端输出中查找：{lesson.evidence.join("、")}。</p></div><button className={progress.verified ? "done-btn" : "primary-btn"} onClick={onSelfCheck}><ShieldCheck />{progress.verified ? "自检已通过" : "运行自检"}</button><details className="mistakes"><summary>遇到问题时先看这里</summary>{lesson.commonMistakes.map((item) => <p key={item}><AlertTriangle />{item}</p>)}</details></div></section>
+
+      <section className="lesson-section"><div className="step-number">4</div><div className="lesson-section-body"><div className="section-heading"><span>确认理解</span><h2>{lesson.quiz.question}</h2><p>答错不会扣分，可以重新选择。</p></div><div className="quiz-options">{lesson.quiz.options.map((option, optionIndex) => <button key={option} className={quizAnswer === optionIndex ? optionIndex === lesson.quiz.correct ? "correct" : "wrong" : ""} onClick={() => { setQuizAnswer(optionIndex); if (optionIndex === lesson.quiz.correct) onQuizPass(); }} disabled={progress.quiz}><span>{String.fromCharCode(65 + optionIndex)}</span>{option}</button>)}</div>{(quizWrong || progress.quiz) && <div className={quizWrong ? "quiz-feedback wrong" : "quiz-feedback correct"}>{quizWrong ? "还不对。" : "回答正确。"}{lesson.quiz.explanation}</div>}</div></section>
+
+      <section className="lesson-finish"><div><strong>{progress.concept && allCommands && progress.verified && progress.quiz ? "本节要求已全部完成" : "本节还没有完成"}</strong><p>{progress.concept && allCommands && progress.verified && progress.quiz ? "可以完成本节并解锁下一课。" : `下一步：${nextAction}`}</p></div><button className="primary-btn large" onClick={onComplete}><Check />完成本节</button></section>
+    </>
+  );
+}
+
+function TerminalPanel({ lines, input, onInput, onRun, onClear }: { lines: string[]; input: string; onInput: (value: string) => void; onRun: () => void; onClear: () => void }) {
+  return <section className="terminal-panel"><div className="terminal-head"><span><Terminal />安全练习终端</span><small>可以自己输入 · 不执行真实写操作</small><button onClick={onClear} aria-label="清空终端"><Trash2 /></button></div><div className="terminal-body" aria-live="polite">{lines.length ? lines.map((line, index) => <div key={`${index}-${line}`} className={line.startsWith("$") ? "terminal-command" : line.startsWith("已拦截") ? "terminal-blocked" : "terminal-output"}>{line}</div>) : <div className="terminal-empty">终端是空的。输入 help 或运行上方课程命令。</div>}</div><div className="terminal-input-row"><span>$</span><input value={input} onChange={(event) => onInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") onRun(); }} aria-label="输入安全查询命令" placeholder="例如：kubectl get pods；输入 help 查看说明" autoCapitalize="none" autoCorrect="off" spellCheck={false} /><button onClick={onRun} aria-label="执行输入的命令"><Play /></button></div></section>;
+}
+
+function ClusterView({ resources, events, logs, connection, onConnect }: { resources: Resource[]; events: typeof mockEvents; logs: string[]; connection: ConnectionState; onConnect: () => void }) {
+  const [tab, setTab] = useState<"resources" | "events" | "logs">("resources");
+  const [onlyIssues, setOnlyIssues] = useState(false);
+  const visibleResources = onlyIssues ? resources.filter((resource) => resource.tone === "warn") : resources;
+  return <><PageHeader eyebrow="进阶区域" title="集群资源" description="这页用于观察学习集群。第一次使用请先完成左侧五课，不需要现在就理解所有字段。" actions={<button className="primary-btn" onClick={onConnect} disabled={connection === "connecting"}><PlugZap />{connection === "live" ? "刷新实机" : "连接实机"}</button>} /><div className="explain-band"><CircleHelp /><div><strong>这页是干什么的？</strong><p>资源看“现在怎么样”，事件看“Kubernetes 发生了什么”，日志看“应用内部说了什么”。连接实机仍然只读。</p></div></div><div className="tab-bar" role="tablist"><button role="tab" aria-selected={tab === "resources"} className={tab === "resources" ? "active" : ""} onClick={() => setTab("resources")}><Server />资源</button><button role="tab" aria-selected={tab === "events"} className={tab === "events" ? "active" : ""} onClick={() => setTab("events")}><AlertTriangle />事件</button><button role="tab" aria-selected={tab === "logs"} className={tab === "logs" ? "active" : ""} onClick={() => setTab("logs")}><FileCode2 />日志</button></div>{tab === "resources" && <section className="data-panel"><div className="data-toolbar"><div><strong>learning 命名空间</strong><small>{connection === "live" ? "实机只读数据" : "教学模拟数据"}</small></div><button className={onlyIssues ? "selected" : ""} onClick={() => setOnlyIssues((value) => !value)}><Search />{onlyIssues ? "显示全部" : "只看异常"}</button></div>{visibleResources.length ? <div className="resource-table"><div className="table-row table-head"><span>资源类型</span><span>名称</span><span>状态</span><span>它说明什么</span></div>{visibleResources.map((resource) => <div className="table-row" key={`${resource.kind}-${resource.name}`}><span>{resource.kind}</span><strong>{resource.name}</strong><em className={resource.tone}>{resource.status}</em><small>{resource.detail}</small></div>)}</div> : <EmptyState title="没有异常资源" description="当前筛选条件下没有警告项。点击“显示全部”查看所有资源。" />}</section>}{tab === "events" && <section className="data-panel">{events.length ? <div className="event-list">{events.map((event, index) => <div key={`${event.title}-${index}`}><AlertTriangle /><div><strong>{event.title}</strong><p>{event.detail}</p><small>{event.time}</small></div></div>)}</div> : <EmptyState title="当前没有 Kubernetes 事件" description="这通常是好事：学习命名空间最近没有需要记录的异常事件。" />}</section>}{tab === "logs" && <section className="data-panel"><div className="log-output">{logs.map((line, index) => <div key={`${index}-${line}`}>{line}</div>)}</div></section>}</>;
+}
+
+function IncidentView({ onDocs }: { onDocs: () => void }) {
+  const [state, setState] = useState<"idle" | "loading" | "live" | "error">("idle");
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const load = async () => {
+    setState("loading");
+    try {
+      const base = import.meta.env.VITE_OPSPILOT_API_URL ?? "http://127.0.0.1:8000";
+      const [health, response] = await Promise.all([fetch(`${base}/health`), fetch(`${base}/incidents`)]);
+      if (!health.ok || !response.ok) throw new Error("unavailable");
+      const payload = await response.json();
+      setIncidents(Array.isArray(payload) ? payload : []);
+      setState("live");
+    } catch {
+      setIncidents([]);
+      setState("error");
+    }
+  };
+  return <><PageHeader eyebrow="进阶区域" title="Opspilot 事故中心" description="完成故障排查课后，再来理解告警如何变成可调查、可审批的事故。" actions={<><button className="secondary-btn" onClick={onDocs}><BookOpen />查看流程</button><button className="primary-btn" onClick={load} disabled={state === "loading"}><RefreshCw />{state === "loading" ? "连接中" : state === "live" ? "刷新事故" : "连接 Opspilot"}</button></>} /><div className="explain-band"><CircleHelp /><div><strong>事故中心不是自动重启按钮</strong><p>流程是：Alertmanager 发告警 → Opspilot 创建事故 → 调查证据 → 提出修复方案 → 人工审批 → 执行和验证。</p></div></div>{state === "error" && <ErrorState onRetry={load} />}{state !== "error" && incidents.length === 0 && <EmptyState title={state === "live" ? "当前没有事故" : "还没有连接 Opspilot"} description={state === "live" ? "服务正常且暂时没有收到告警。" : "点击右上角“连接 Opspilot”读取本机 API；不会执行修复或回滚。"} />}{incidents.length > 0 && <section className="incident-list">{incidents.map((incident) => <article key={incident.id}><span className="severity">{incident.severity}</span><div><strong>{incident.alert_name ?? "未命名告警"}</strong><p>{incident.summary ?? "暂无摘要"}</p><small>{incident.service ?? "未知服务"} · {incident.created_at ?? "时间未知"}</small></div><em>{incident.status}</em></article>)}</section>}<div className="approval-boundary"><ShieldCheck /><div><strong>人工审批边界</strong><p>本工作台只读显示事故。回滚和其他写操作必须经过服务端身份验证与人工审批。</p></div></div></>;
+}
+
+function PageHeader({ eyebrow, title, description, actions }: { eyebrow: string; title: string; description: string; actions?: React.ReactNode }) {
+  return <header className="page-header"><div><span>{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>{actions && <div className="page-actions">{actions}</div>}</header>;
+}
+
+function EmptyState({ title, description }: { title: string; description: string }) {
+  return <div className="empty-state"><Check /><strong>{title}</strong><p>{description}</p></div>;
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return <div className="error-state"><AlertCircle /><div><strong>无法连接本机 Opspilot API</strong><p>API 可能还没有启动。工作台其他课程仍可正常使用。</p></div><button className="secondary-btn" onClick={onRetry}><RefreshCw />重试</button></div>;
+}
+
+function ConfirmModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  return <div className="modal-backdrop" onClick={onClose}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="reset-title" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><span>学习进度</span><h2 id="reset-title">确定从头开始吗？</h2></div><button className="icon-button" aria-label="关闭" onClick={onClose}><X /></button></div><p>只会清除当前浏览器里的课程进度和终端记录，不会删除集群、代码或事故数据。</p><div className="modal-actions"><button className="secondary-btn" onClick={onClose}>取消</button><button className="danger-btn" onClick={onConfirm}><Trash2 />确认重置</button></div></div></div>;
+}
+
+function ReferenceModal({ onClose }: { onClose: () => void }) {
+  return <div className="modal-backdrop" onClick={onClose}><div className="modal reference-modal" role="dialog" aria-modal="true" aria-labelledby="reference-title" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><span>随时可以查</span><h2 id="reference-title">术语表和官方资料</h2></div><button className="icon-button" aria-label="关闭" onClick={onClose}><X /></button></div><h3>通俗术语表</h3><div className="glossary-list">{glossary.map((item) => <div key={item.term}><strong>{item.term}</strong><span>{item.plain}</span><p>{item.detail}</p></div>)}</div><h3>官方学习资料</h3><div className="docs-list">{docs.map((doc) => <a href={doc.url} target="_blank" rel="noreferrer" key={doc.url}><BookOpen /><span><strong>{doc.name}</strong><small>{doc.desc}</small></span><ExternalLink /></a>)}</div></div></div>;
+}
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root mount point");

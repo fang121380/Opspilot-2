@@ -1,0 +1,60 @@
+{
+  "target": "http://127.0.0.1:5173",
+  "desktop": {
+    "title": "Opspilot 学习工作台",
+    "url": "http://127.0.0.1:5173/",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "bodyTextLength": 861,
+    "bodyTextSample": "Opspilot 云原生学习工作台 学习集群 kind-k8s-lab 教学模拟 连接实机 工作台 学习首页 从这里开始 课程练习 0/5 集群资源 进阶 事故中心 进阶 五课学习路径 0/5 1 环境检查 认识并检查 Docker、Kind、kubectl 10 分钟 可学习 2 Docker 基础 镜像、容器和端口 25 分钟 未解锁 3 Kind 集群 集群、节点、上下文和命名空间 30 分钟 未解锁 4 部署一个应用 Deployment、Pod 和 Service ",
+    "horizontalScroll": false,
+    "scrollWidth": 1425,
+    "textOverflow": [],
+    "smallButtons": [],
+    "blockingFixed": [],
+    "hasMain": true,
+    "screenshotPath": "/Users/andrew/Documents/Codex/2026-08-27/fen/.design/screenshots/beginner-full-final-desktop.png",
+    "screenshotBytes": 194435,
+    "blankRisk": false
+  },
+  "mobile": {
+    "title": "Opspilot 学习工作台",
+    "url": "http://127.0.0.1:5173/",
+    "viewport": {
+      "width": 406,
+      "height": 879
+    },
+    "bodyTextLength": 567,
+    "bodyTextSample": "kind-k8s-lab 连接实机 零基础学习模式 先别碰集群，从三个工具开始。 每一课都会先解释概念，再让你执行命令、检查结果和完成小测。看不懂的词可以随时打开右上角的术语表。 开始第 1 课 先看术语表 你现在只需要做一件事 认识 Docker、Kind 和 kubectl 预计 10 分钟 · 不会操作真实生产环境 先建立整体认识 这些东西是怎么连在一起的？ 1 你的应用 代码和依赖 2 Docker 装进容器 3 Kind 创建本地集群 4 Kubernetes 管理",
+    "horizontalScroll": false,
+    "scrollWidth": 406,
+    "textOverflow": [
+      {
+        "tag": "div",
+        "text": "kind-k8s-lab 连接实机 零基础学习模式 先别碰集群，从三个工具开始。 每一课都会先解释概念，再让你执行命令、检查结果和完成小测。看不懂的词可以随时打",
+        "clientWidth": 390,
+        "scrollWidth": 406
+      },
+      {
+        "tag": "div",
+        "text": "kind-k8s-lab 连接实机 零基础学习模式 先别碰集群，从三个工具开始。 每一课都会先解释概念，再让你执行命令、检查结果和完成小测。看不懂的词可以随时打",
+        "clientWidth": 390,
+        "scrollWidth": 406
+      },
+      {
+        "tag": "header",
+        "text": "kind-k8s-lab 连接实机",
+        "clientWidth": 390,
+        "scrollWidth": 406
+      }
+    ],
+    "smallButtons": [],
+    "blockingFixed": [],
+    "hasMain": true,
+    "screenshotPath": "/Users/andrew/Documents/Codex/2026-08-27/fen/.design/screenshots/beginner-full-final-mobile.png",
+    "screenshotBytes": 64167,
+    "blankRisk": false
+  }
+}

@@ -61,7 +61,7 @@ Open `http://127.0.0.1:5173`. The full workbench has overview, learning path, cl
 
 ### 零基础入口 / Beginner entry
 
-第一次打开时不要进入“集群资源”。首页顶部的“第一次使用？从这里开始”会先解释 Docker、Kind、kubectl 三个词；然后点击“继续学习”，从阶段 00 环境检查开始。每个阶段顶部都有“概念地图”，先读懂术语再执行命令。终端支持自己输入命令，但只模拟安全的只读白名单；未知命令会明确拦截，不会执行到本机。学习进度只保存在当前浏览器，可在侧栏底部重置。
+第一次打开时不要进入“集群资源”。点击首页唯一主按钮“开始第 1 课”，按照“读懂概念 → 执行三条命令 → 自检 → 小测”完成课程。每课都会说明为什么要学、预期看到什么和常见错误。终端支持自己输入命令，但只模拟安全的只读白名单；未知命令会明确拦截，不会执行到本机。学习进度只保存在当前浏览器，可在侧栏底部重置。
 
 When opening the workbench for the first time, start with the “第一次使用？从这里开始 / Start here” guide on the overview page. It explains Docker, Kind, and kubectl in plain language. Click “继续学习 / Continue learning” to begin stage 00; each stage includes a concept map before its commands. The terminal accepts custom input but only simulates safe read-only allowlisted queries; unknown commands are explicitly blocked and never run on the host. Progress is stored only in the current browser and can be reset from the sidebar.
 
