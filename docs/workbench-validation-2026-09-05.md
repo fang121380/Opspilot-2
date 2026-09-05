@@ -28,6 +28,8 @@ The browser tests also cover all five lessons through completion and reload, cor
 
 ## Limits
 
+The code/documentation delivery at commit `087584e` passed [GitHub CI run 33969059232](https://github.com/fang121380/Opspilot-2/actions/runs/33969059232): `quality`, `workbench`, and `compose-runtime`. This includes a successful Docker image build and Compose migrations, health check, and recovery dry-run on the GitHub runner, despite the separate local registry-network failure. After deployment, both loopback and LAN origins returned HTTP 200 and served real cluster resources through the same-origin proxy. No firewall or network-profile settings were changed.
+
 - The local Docker build could not fetch the `python:3.12-slim` registry token because `auth.docker.io` timed out. This is not recorded as a successful build. CI retains container build and Compose runtime checks.
 - No physical Mac mini or Android device was controlled. Android layout was checked with Chromium mobile-sized viewports; LAN connectivity from an actual phone depends on the local network and firewall.
 - Python 3.13 reports existing SQLite connection ResourceWarnings in core store tests and an upstream Starlette/AnyIO deprecation warning. These did not fail tests and were not silenced in code.

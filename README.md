@@ -97,7 +97,7 @@ Kind 中 Prometheus -> Alertmanager -> Opspilot API -> 调查建议已实机验�
 2026-08-31 实机闭环在人工审批门前停止，未执行回滚
 ```
 
-本次本机 Docker 镜像构建因 Docker Hub 连接超时未完成；Mac 真机、安卓实体手机、真实 Kubernetes 回滚未在本次验证。完整范围、保留的依赖警告与 CI 检查见 [工作台验证记录](docs/workbench-validation-2026-09-05.md)。
+本机 Docker 镜像构建因 Docker Hub 连接超时未完成；相同代码的 [GitHub CI](https://github.com/fang121380/Opspilot-2/actions/runs/33969059232) 已通过 Docker 构建、Compose 运行与前端检查。Mac 真机、安卓实体手机、真实 Kubernetes 回滚未在本次验证。完整范围和保留的依赖警告见 [工作台验证记录](docs/workbench-validation-2026-09-05.md)。
 
 ## Kind 实机演练
 
