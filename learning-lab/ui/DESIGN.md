@@ -7,6 +7,8 @@
 ## 交互 / Interaction
 
 - 阶段导航只允许进入已完成或当前阶段；未解锁阶段显示 disabled。
+- 首屏提供“第一次使用？从这里开始”新手入口，按 Docker、Kind、kubectl 三个基础词解释，再引导进入阶段 00。
+- 每个学习阶段先显示“概念地图”，按“看懂 → 执行 → 检查 → 完成”的顺序组织内容。
 - 实机连接只调用 `lab-api.py` 的 `context`、`nodes`、`resources`、`events`、`logs` allowlist，不接受任意 Shell。
 - 命令下拉框只运行预置只读命令，输出固定且可复现；资源表支持“只看异常”筛选。
 - 事故中心只读调用 Opspilot `/health` 和 `/incidents`；提案、审批、执行和回滚不在前端自动触发。

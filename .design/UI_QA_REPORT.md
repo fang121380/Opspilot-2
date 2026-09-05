@@ -4,12 +4,12 @@ Target: http://127.0.0.1:5173
 
 ## Screenshots
 
-- Desktop: screenshots/full-workbench-desktop.png
-- Mobile: screenshots/full-workbench-mobile.png
+- Desktop: screenshots/beginner-guide-desktop.png
+- Mobile: screenshots/beginner-guide-mobile.png
 
 ## Desktop Checks
 
-- PASS blank / loading risk: body text 749, screenshot 205949 bytes
+- PASS blank / loading risk: body text 924, screenshot 239205 bytes
 - PASS horizontal scroll: scrollWidth 1440, viewport 1440
 - FAIL text overflow candidates: 1
 - FAIL small button candidates: 6
@@ -17,7 +17,7 @@ Target: http://127.0.0.1:5173
 
 ## Mobile Checks
 
-- PASS blank / loading risk: body text 450, screenshot 113366 bytes
+- PASS blank / loading risk: body text 625, screenshot 106938 bytes
 - PASS horizontal scroll: scrollWidth 390, viewport 390
 - FAIL text overflow candidates: 2
 - FAIL small button candidates: 5
