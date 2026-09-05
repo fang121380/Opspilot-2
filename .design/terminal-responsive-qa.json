@@ -1,0 +1,129 @@
+{
+  "target": "http://127.0.0.1:5173",
+  "desktop": {
+    "title": "Opspilot 学习工作台",
+    "url": "http://127.0.0.1:5173/",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "bodyTextLength": 924,
+    "bodyTextSample": "Opspilot 学习工作台 学习集群 kind-k8s-lab 本地模拟 连接实机 孔 工作台 概览 Overview 学习路径 0/5 集群资源 Cluster 事故中心 Opspilot 学习阶段 0/5 00 环境检查 Docker、kubectl、Kind 10 分钟 进行中 01 Docker 基础 镜像、容器、端口 25 分钟 未解锁 02 Kind 集群 节点、上下文、命名空间 30 分钟 未解锁 03 部署一个应用 Pod、Deployment、Servic",
+    "horizontalScroll": false,
+    "scrollWidth": 1440,
+    "textOverflow": [
+      {
+        "tag": "small",
+        "text": "Pod、Deployment、Service",
+        "clientWidth": 135,
+        "scrollWidth": 144
+      }
+    ],
+    "smallButtons": [
+      {
+        "tag": "button",
+        "text": "重置进度",
+        "width": 62,
+        "height": 22
+      },
+      {
+        "tag": "button",
+        "text": "查看集群",
+        "width": 94,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "继续学习",
+        "width": 94,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "查看路径",
+        "width": 77,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "开始",
+        "width": 69,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "连接学习集群",
+        "width": 376,
+        "height": 32
+      }
+    ],
+    "blockingFixed": [],
+    "hasMain": true,
+    "screenshotPath": "/Users/andrew/Documents/Codex/2026-08-27/fen/.design/screenshots/terminal-responsive-desktop.png",
+    "screenshotBytes": 239205,
+    "blankRisk": false
+  },
+  "mobile": {
+    "title": "Opspilot 学习工作台",
+    "url": "http://127.0.0.1:5173/",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "bodyTextLength": 625,
+    "bodyTextSample": "kind-k8s-lab 连接实机 孔 第一次使用？从这里开始 你不需要先懂 Kubernetes。先认识 3 个基础概念，再做第一个 10 分钟练习。 Docker 应用的盒子 把程序和依赖装在一起。 Kind 本机练习集群 在电脑里模拟 Kubernetes。 kubectl 控制命令 用命令查看和操作集群。 第 1 步 点击右上角“继续学习” 进入环境检查，不会修改任何真实服务。 工作台 / OVERVIEW 学习控制台 从概念、命令到真实集群证据，按阶段完成 Kube",
+    "horizontalScroll": false,
+    "scrollWidth": 390,
+    "textOverflow": [
+      {
+        "tag": "code",
+        "text": "kind-k8s-lab",
+        "clientWidth": 86,
+        "scrollWidth": 91
+      },
+      {
+        "tag": "small",
+        "text": "Deployment · Pod · Service · Event",
+        "clientWidth": 155,
+        "scrollWidth": 181
+      }
+    ],
+    "smallButtons": [
+      {
+        "tag": "button",
+        "text": "查看集群",
+        "width": 177,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "继续学习",
+        "width": 177,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "查看路径",
+        "width": 74,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "开始",
+        "width": 68,
+        "height": 32
+      },
+      {
+        "tag": "button",
+        "text": "连接学习集群",
+        "width": 96,
+        "height": 32
+      }
+    ],
+    "blockingFixed": [],
+    "hasMain": true,
+    "screenshotPath": "/Users/andrew/Documents/Codex/2026-08-27/fen/.design/screenshots/terminal-responsive-mobile.png",
+    "screenshotBytes": 106938,
+    "blankRisk": false
+  }
+}

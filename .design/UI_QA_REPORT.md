@@ -4,8 +4,8 @@ Target: http://127.0.0.1:5173
 
 ## Screenshots
 
-- Desktop: screenshots/staged-learning-desktop.png
-- Mobile: screenshots/staged-learning-mobile.png
+- Desktop: screenshots/terminal-responsive-desktop.png
+- Mobile: screenshots/terminal-responsive-mobile.png
 
 ## Desktop Checks
 
