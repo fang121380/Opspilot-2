@@ -4,8 +4,8 @@ Target: http://127.0.0.1:5173
 
 ## Screenshots
 
-- Desktop: screenshots/beginner-guide-desktop.png
-- Mobile: screenshots/beginner-guide-mobile.png
+- Desktop: screenshots/staged-learning-desktop.png
+- Mobile: screenshots/staged-learning-mobile.png
 
 ## Desktop Checks
 
