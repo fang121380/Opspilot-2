@@ -50,6 +50,10 @@ Follow the Docker -> Kind -> Kubernetes -> troubleshooting path in [`learning-la
 
 Windows 部署见 [`learning-lab/windows/README.md`](learning-lab/windows/README.md)，执行 `Install-All.ps1` 可一键安装所需工具。
 
+学习界面支持电脑和安卓浏览器：课程采用“理解概念 → 练习命令 → 判断证据”，课程与故障案例明确使用模拟数据；实机区域通过同源只读代理显示独立的更新时间和错误状态。手机与电脑在同一 Wi-Fi 时，可使用 `npm run dev:lan` 或 Windows 启动脚本的 `-Lan` 选项。手机端为响应式网页，进度保存在当前浏览器，不包含 APK、离线运行或跨设备同步。详见 [学习工作台](learning-lab/README.md)。
+
+The learning UI supports desktop and Android browsers with evidence-based lessons, explicit simulation labels, and independently refreshed read-only cluster data. Use LAN mode on a trusted shared network; this is a responsive web app, not an APK or offline package. Progress is browser-local. See the [workbench guide](learning-lab/README.md).
+
 默认健康检查：`http://127.0.0.1:8000/health`。OpenAPI：`http://127.0.0.1:8000/docs`。Prometheus 指标：`http://127.0.0.1:8000/metrics`。Compose 可通过 `OPSPILOT_HOST_PORT` 改用未占用的宿主机端口。
 
 ## 已完成能力
@@ -80,15 +84,20 @@ Windows 部署见 [`learning-lab/windows/README.md`](learning-lab/windows/README
 ## 当前验证
 
 ```text
-120 个单元/集成测试通过
-代码覆盖率 91.04%
+182 个 Python 单元/集成测试通过（Windows，2026-09-05）
+核心 app/ 代码覆盖率 91.05%
+25 个前端逻辑测试通过
+10 个浏览器流程测试通过，包含 320/390/768/1440px 和 axe 可访问性检查
+前端生产构建和 Vite/Playwright 配置类型检查通过
 Ruff 静态检查通过
 离线评测 4/4 通过
 kubectl v1.37.0 和 kind v0.33.0 已验证
-Docker Engine 29.7.2 与 Docker Desktop 4.88.1 已验证
+Docker Engine 29.7.2 与 Docker Desktop 4.89.0 学习集群已验证
 Kind 中 Prometheus -> Alertmanager -> Opspilot API -> 调查建议已实机验证
 2026-08-31 实机闭环在人工审批门前停止，未执行回滚
 ```
+
+本次本机 Docker 镜像构建因 Docker Hub 连接超时未完成；Mac 真机、安卓实体手机、真实 Kubernetes 回滚未在本次验证。完整范围、保留的依赖警告与 CI 检查见 [工作台验证记录](docs/workbench-validation-2026-09-05.md)。
 
 ## Kind 实机演练
 

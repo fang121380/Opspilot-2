@@ -1,90 +1,114 @@
-# Opspilot 学习工作台 / Opspilot Learning Lab
+# Opspilot 学习工作台 / Learning Workbench
 
-这是一个面向零基础学习者的本地练习区，按 Docker -> Kind -> Kubernetes -> 监控与故障排查递进。它借鉴了 Kubernetes 官方 examples、kind 官方 quick start、`k8slab` 的实验验收标准，以及中文 macOS + Docker Desktop + Kind 教程的分阶段结构。
+面向初学者的 React 浏览器工作台，覆盖 Docker、Kind、Kubernetes 和证据驱动排障。桌面与 Android 使用同一响应式网页；不提供 APK、离线 PWA 或跨设备进度同步。
 
-This is a beginner-friendly local lab that progresses from Docker to Kind, Kubernetes, monitoring, and troubleshooting. It borrows the lab-and-acceptance-criteria pattern from Kubernetes examples, the official kind quick start, `k8slab`, and a Chinese macOS + Docker Desktop + Kind learning guide.
+A React browser workbench for Docker, Kind, Kubernetes, and evidence-based troubleshooting. Desktop and Android share the responsive website. There is no APK, offline PWA, or cross-device progress sync.
 
-## 安全边界 / Safety boundary
+## 两种练习 / Two Ways to Learn
 
-- 学习集群名固定为 `k8s-lab`，不会修改 `opspilot-2`。
-- `down` 只删除 `k8s-lab`，不会清理 Docker 全局资源。
-- 实验使用本地镜像和 `nginx` 示例，不接触生产集群、云账号或 Secret。
-
-- The lab cluster is always named `k8s-lab` and never changes `opspilot-2`.
-- `down` deletes only `k8s-lab`; it does not prune global Docker resources.
-- Exercises use local images and an `nginx` sample, with no production cluster, cloud account, or Secret access.
-
-## 开始 / Start
-
-```bash
-cd learning-lab
-./scripts/check-prerequisites.sh
-./scripts/lab.sh up
-```
-
-然后按顺序阅读并执行：
-
-Then follow the labs in order:
-
-| 阶段 / Stage | 文档 / Lab | 重点 / Focus |
+| 入口 / Entry | 数据与行为 / Data and behavior | 依赖 / Dependencies |
 | --- | --- | --- |
-| 00 | [环境检查 / Prerequisites](labs/00-prerequisites.md) | Docker、kubectl、Kind |
-| 01 | [Docker 基础 / Docker basics](labs/01-docker-basics.md) | 镜像、容器、端口 |
-| 02 | [Kind 集群 / Kind cluster](labs/02-kind-cluster.md) | 节点、上下文、命名空间 |
-| 03 | [Kubernetes 应用 / Kubernetes app](labs/03-kubernetes-app.md) | Pod、Deployment、Service |
-| 04 | [故障排查 / Troubleshooting](labs/04-troubleshooting.md) | 日志、探针、滚动更新 |
+| 课程与教学案例 / Lessons and case | 固定模拟输出，不执行本机命令或修改集群 / Fixed examples, no host commands or cluster changes | Node.js >=22.18 |
+| 学习集群 / Live cluster | 固定目标的只读资源、节点、事件、日志 / Read-only resources, nodes, events, logs | Python >=3.12, kubectl, Docker, Kind, `k8s-lab` |
+| 真实事故 / Live incidents | 可选的 Opspilot 事故列表 / Optional Opspilot incident list | 单独启动主 API 及其依赖 / Main API and its dependencies |
 
-常用命令 / Useful commands:
+课程按“理解概念 → 练习命令 → 判断证据”分为三步，五课均可直接进入。完成课程需要概念阅读、本课命令记录自检和证据小测通过。模拟版本输出不能证明本机安装成功，模拟完成也不等于实机验收。
 
-```bash
-./scripts/lab.sh status       # 查看集群和工作负载 / inspect cluster and workloads
-./scripts/lab.sh open         # 端口转发 nginx / port-forward nginx
-make api                    # 启动只读状态桥接 / start the read-only status bridge
-./scripts/lab.sh down         # 删除学习集群 / delete only the lab cluster
-```
+Each lesson has three navigable steps: understand concepts, practice commands, and judge evidence. All five lessons are available. Completion requires reading, verification of that lesson's command records, and its evidence quiz. Simulated versions do not prove local installation; simulated completion is separate from real lab acceptance.
 
-## 工作台界面 / Workbench UI
+## 启动网页 / Start the Website
 
-前端位于 `ui/`，启动方式：
-
-The React workbench lives in `ui/`:
+在仓库根目录执行 / From the repository root:
 
 ```bash
-cd ui
-npm install
+cd learning-lab/ui
+npm ci
 npm run dev
 ```
 
-打开 `http://127.0.0.1:5173`。工作台包含概览、学习路径、集群资源、容器日志和事故中心五个模块：默认使用安全的本地模拟数据，点击“连接实机”后通过 allowlist 只读桥接同步 `k8s-lab` 的资源、事件和日志；事故中心可只读查看本机 Opspilot API 的健康状态与事故列表。接入边界见 [接入计划 / Integration plan](INTEGRATION_PLAN.md)。
+访问 [本机工作台](http://127.0.0.1:5173)。只练习课程时不需要 Docker 或 API。实机查询需要另开终端启动桥接：在仓库根目录运行 Windows 的 `python learning-lab/scripts/lab-api.py`，或 macOS 的 `python3 learning-lab/scripts/lab-api.py`。
 
-Open `http://127.0.0.1:5173`. The full workbench has overview, learning path, cluster resources, container logs, and an incident center. It starts with safe local mock data; “连接实机 / Connect lab” reads allowlisted resources, events, and logs from `k8s-lab`, while the incident center can read Opspilot health and incident records. See [INTEGRATION_PLAN.md](INTEGRATION_PLAN.md) for the integration boundary.
+Open the [local workbench](http://127.0.0.1:5173). Lessons need no Docker or API. For live queries, run the bridge in another terminal from the repository root using `python learning-lab/scripts/lab-api.py` on Windows or `python3 learning-lab/scripts/lab-api.py` on macOS.
 
-### 零基础入口 / Beginner entry
+Windows 11 的安装、建群和启动见 [Windows 指南](windows/README.md)。macOS 提供源码启动器，先按 [Kind 实验](labs/02-kind-cluster.md)创建学习集群，再从仓库根目录运行：
 
-第一次打开时不要进入“集群资源”。点击首页唯一主按钮“开始第 1 课”，按照“读懂概念 → 执行三条命令 → 自检 → 小测”完成课程。每课都会说明为什么要学、预期看到什么和常见错误。终端支持自己输入命令，但只模拟安全的只读白名单；未知命令会明确拦截，不会执行到本机。学习进度只保存在当前浏览器，可在侧栏底部重置。
+For Windows 11, follow the [Windows guide](windows/README.md). The macOS source launcher starts the UI and bridge; create the cluster through the [Kind lab](labs/02-kind-cluster.md) first:
 
-When opening the workbench for the first time, start with the “第一次使用？从这里开始 / Start here” guide on the overview page. It explains Docker, Kind, and kubectl in plain language. Click “继续学习 / Continue learning” to begin stage 00; each stage includes a concept map before its commands. The terminal accepts custom input but only simulates safe read-only allowlisted queries; unknown commands are explicitly blocked and never run on the host. Progress is stored only in the current browser and can be reset from the sidebar.
+```bash
+bash learning-lab/scripts/open-workbench-macos.sh
+```
 
-Windows 用户可直接使用 [Windows 一键部署 / Windows one-click deployment](windows/README.md)，其中的 `Install-All.ps1` 会安装全部工具并启动学习集群。
+日志位于 `learning-lab/.workbench-logs/`。提供 macOS 源码不代表已在 Mac 设备上验证，也不代表已经安装桌面 `.app`。
 
-Windows users can follow [windows/README.md](windows/README.md). `Install-All.ps1` installs the required tools and `Start-LearningLab.ps1` creates the lab cluster and starts the workbench.
+Logs are under `learning-lab/.workbench-logs/`. Providing macOS source does not claim Mac device validation or an installed desktop `.app`.
 
-### macOS 桌面启动 / macOS desktop launcher
+## Android 同一 Wi-Fi / Android on the Same Wi-Fi
 
-当前这台 Mac 的桌面已创建“Opspilot 学习工作台.app”。双击即可启动或复用工作台服务，然后打开 `http://127.0.0.1:5173/`。启动器源码在 `scripts/open-workbench-macos.sh`，日志保存在 `learning-lab/.workbench-logs/ui.log`。它也会监听本机局域网地址；只有同一局域网的设备才可通过 `<本机 IP>:5173` 访问。
+电脑和手机连接同一可信 Wi-Fi，选择一种启动方式 / Join the same trusted Wi-Fi and choose one launch method:
 
-On this Mac, “Opspilot 学习工作台.app” has been created on the desktop. Double-click it to start or reuse the service and open `http://127.0.0.1:5173/`. Its source is `scripts/open-workbench-macos.sh`, and logs are written to `learning-lab/.workbench-logs/ui.log`. The launcher also listens on the local network interface, so only devices on the same LAN can use `<this Mac's IP>:5173`.
+```bash
+# 在 learning-lab/ui / From learning-lab/ui
+npm run dev:lan
+```
 
-## 学习节奏 / Suggested cadence
+```powershell
+# 在仓库根目录 / From the repository root
+.\learning-lab\windows\Start-LearningLab.ps1 -StartUi -StartApi -Lan
+```
 
-每次只完成一个实验：先读目标，再执行命令，最后完成验收清单。遇到错误时先记录 `kubectl get pods -A`、`kubectl describe` 和相关日志，再尝试修复。
+```bash
+# 在仓库根目录 / From the repository root
+bash learning-lab/scripts/open-workbench-macos.sh --lan
+```
 
-Complete one lab at a time: read the goal, run the commands, then check every acceptance item. When something fails, capture `kubectl get pods -A`, `kubectl describe`, and the relevant logs before changing anything.
+Android 浏览器打开 `http://<电脑的 Wi-Fi IPv4>:5173`；Windows 用 `ipconfig` 查地址，macOS 在 Wi-Fi 网络详情中查看。手机上的 `localhost` 指手机自身。默认服务仅绑定 `127.0.0.1`；若 5173 已运行本机模式，先停止该 UI 进程，再用 LAN 模式重启。Windows 防火墙只在私人网络允许 TCP 5173。不要将 8787、8000 或 Kubernetes API 暴露到局域网，也不要转发到公网。
 
-## 参考项目 / References
+On Android, open `http://<computer-Wi-Fi-IPv4>:5173`. Find the address with Windows `ipconfig` or macOS Wi-Fi details. Phone `localhost` means the phone. The default server binds only to `127.0.0.1`; stop an existing local-only UI process before restarting in LAN mode. Allow TCP 5173 on Windows Private networks only. Keep ports 8787, 8000, and the Kubernetes API local, without public port forwarding.
 
-- [kind 官方仓库 / official repository](https://github.com/kubernetes-sigs/kind)
-- [Kubernetes 官方 examples](https://github.com/kubernetes/examples)
-- [Azure GBB Kubernetes hands-on lab](https://github.com/palma21/k8slab)
-- [KubernetesLabs walkthroughs](https://github.com/nirgeier/KubernetesLabs)
-- [macOS + Kind 中文实战指南](https://github.com/bysbsh/k8s-local-learning-guide)
+LAN 访问者可以通过网页代理读取学习资源、日志，以及已启动主服务的允许路由。浏览器请求使用同源 `/lab-api` 和 `/opspilot-api`，不会请求手机自己的 8787 或 8000。
+
+LAN visitors can read lab data and allowed main-service routes through the web proxy. Browser requests use same-origin `/lab-api` and `/opspilot-api`, never the phone's own API ports.
+
+## 数据与边界 / Data and Boundaries
+
+桥接固定访问 `kind-k8s-lab`，工作负载查询固定在 `learning`。资源、事件和节点是结构化 Kubernetes JSON，封装在响应的 `output` 字符串内；日志是文本。四类请求分别保留时间、错误和上次成功快照，单项失败不会丢弃其他成功结果。空事件列表不能证明健康。
+
+The bridge fixes the context to `kind-k8s-lab` and workload namespace to `learning`. Resources, events, and nodes return structured Kubernetes JSON inside the `output` string; logs remain text. Each channel retains its own timestamp, error, and last successful snapshot. One failed request does not discard other results. An empty event list is not proof of health.
+
+进度保存在当前浏览器、当前来源的 localStorage；电脑 localhost、LAN 地址和手机是不同存储空间。旧 `v3` 记录迁移保留有效阅读和命令历史，但无证据的完成状态和旧题目的小测通过状态会重置。新记录含课程版本及每课命令输出；存储不可用时只能保留当前会话进度。
+
+Progress is browser-local and origin-specific. Desktop localhost, LAN URLs, and the phone do not share storage. Migration of old `v3` data retains valid reading and command history but clears unsupported completion and obsolete quiz credit. New records include curriculum version and per-lesson output. Unavailable storage limits progress to the current session.
+
+网页终端全部模拟，包括 `docker run`。桥接和代理只允许固定 GET 查询。安装脚本会安装工具；启动脚本会创建 `k8s-lab` 并应用示例；清理脚本会删除该学习集群。手工实验写操作必须显式使用 `--context kind-k8s-lab`，不能操作其他集群，也不执行全局 Docker 清理。
+
+All web terminal commands are simulated, including `docker run`. The bridge and proxies allow only fixed GET queries. Installers install tools; lab startup creates `k8s-lab` and applies the sample; cleanup deletes that cluster. Manual Kubernetes writes must explicitly use `--context kind-k8s-lab`. Do not operate on other clusters or run global Docker cleanup.
+
+可选主服务按[仓库 README](../README.md)安装依赖和数据库后，从仓库根目录运行 `python -m uvicorn app.main:app --host 127.0.0.1 --port 8000`。桥接 8787 与主服务 8000 是两个独立服务；启动桥接不会启动主服务。具体协议见[集成说明](INTEGRATION_PLAN.md)。
+
+For optional live incidents, prepare the dependencies and database in the [repository README](../README.md), then run `python -m uvicorn app.main:app --host 127.0.0.1 --port 8000` from the repository root. The bridge on 8787 and main API on 8000 are separate services. Starting the bridge does not start Opspilot. See the [integration contract](INTEGRATION_PLAN.md).
+
+## 手工实验 / Manual Labs
+
+| 实验 / Lab | 验收重点 / Acceptance focus |
+| --- | --- |
+| [00 环境检查 / Prerequisites](labs/00-prerequisites.md) | 区分客户端、容器引擎、集群连通 / Client, engine, cluster connectivity |
+| [01 Docker 基础 / Docker](labs/01-docker-basics.md) | 容器运行、端口绑定、清理 / Container, port binding, cleanup |
+| [02 Kind 集群 / Kind](labs/02-kind-cluster.md) | 固定 context、Ready 节点 / Explicit context, Ready nodes |
+| [03 Kubernetes 应用 / Application](labs/03-kubernetes-app.md) | 副本就绪、Service 与实际请求 / Ready replicas, Service, real request |
+| [04 故障排查 / Troubleshooting](labs/04-troubleshooting.md) | 就绪探针证据与恢复验证 / Readiness evidence and recovery |
+
+## 前端检查 / Frontend Checks
+
+在 `learning-lab/ui` 执行 / From `learning-lab/ui`:
+
+```bash
+npm ci
+npm test
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
+构建后 `npm run preview` 默认使用 [本机 4173](http://127.0.0.1:4173)；`npm run preview:lan` 使用 LAN 5173。开发和预览均有相同只读代理。静态文件服务器不会自动提供这些代理；实机页面需要代理和本地服务。测试命令是复现步骤，验证结果以本次实际运行记录为准。
+
+After building, `npm run preview` uses [loopback port 4173](http://127.0.0.1:4173); `npm run preview:lan` uses LAN port 5173. Development and preview share read-only proxies. A plain static file server does not provide these proxies. Test commands describe how to reproduce checks, not a claim that every platform or integration has passed.
