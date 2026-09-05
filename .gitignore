@@ -22,3 +22,6 @@ coverage.xml
 .kind/
 .secrets/
 work/
+
+# Local learning-workbench launcher logs
+learning-lab/.workbench-logs/

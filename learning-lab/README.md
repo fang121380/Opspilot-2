@@ -69,6 +69,12 @@ Windows 用户可直接使用 [Windows 一键部署 / Windows one-click deployme
 
 Windows users can follow [windows/README.md](windows/README.md). `Install-All.ps1` installs the required tools and `Start-LearningLab.ps1` creates the lab cluster and starts the workbench.
 
+### macOS 桌面启动 / macOS desktop launcher
+
+当前这台 Mac 的桌面已创建“Opspilot 学习工作台.app”。双击即可启动或复用工作台服务，然后打开 `http://127.0.0.1:5173/`。启动器源码在 `scripts/open-workbench-macos.sh`，日志保存在 `learning-lab/.workbench-logs/ui.log`。它也会监听本机局域网地址；只有同一局域网的设备才可通过 `<本机 IP>:5173` 访问。
+
+On this Mac, “Opspilot 学习工作台.app” has been created on the desktop. Double-click it to start or reuse the service and open `http://127.0.0.1:5173/`. Its source is `scripts/open-workbench-macos.sh`, and logs are written to `learning-lab/.workbench-logs/ui.log`. The launcher also listens on the local network interface, so only devices on the same LAN can use `<this Mac's IP>:5173`.
+
 ## 学习节奏 / Suggested cadence
 
 每次只完成一个实验：先读目标，再执行命令，最后完成验收清单。遇到错误时先记录 `kubectl get pods -A`、`kubectl describe` 和相关日志，再尝试修复。
