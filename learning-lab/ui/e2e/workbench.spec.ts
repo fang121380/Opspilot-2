@@ -2,6 +2,51 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { lessons } from "../src/curriculum";
 
+test("successful review preserves completion across refresh", async ({ page }) => {
+  const lesson = lessons[0];
+  await page.goto("/#learn/00/0");
+  await page.getByRole("button", { name: "理解了，开始练习" }).click();
+  for (const item of lesson.commands) {
+    await page.getByRole("button", { name: `模拟运行：${item.command}`, exact: true }).click();
+  }
+  await page.getByRole("button", { name: "检查本课记录" }).click();
+  await page.getByRole("radio", { name: lesson.quiz.options[lesson.quiz.correct], exact: true }).check();
+  await page.getByRole("button", { name: "检查答案" }).click();
+  await page.getByRole("button", { name: "完成本课", exact: true }).click();
+  await page.goto("/#learn/00/1");
+  await page.getByRole("button", { name: `模拟运行：${lesson.commands[0].command}`, exact: true }).click();
+  await page.goto("/");
+  await page.reload();
+  await expect(page.getByRole("progressbar")).toHaveAttribute("value", "1");
+});
+
+test("home resumes the last lesson step after reload", async ({ page }) => {
+  await page.goto("/#learn/02/1");
+  await page.getByRole("textbox", { name: "输入本课模拟命令" }).fill("kubctl get nodes");
+  await page.getByRole("button", { name: "运行输入的模拟命令" }).click();
+  await page.goto("/");
+  await page.reload();
+  await expect(page.getByText("上次停在：练习命令")).toBeVisible();
+  await page.locator(".continue-section .primary-button").click();
+  await expect(page).toHaveURL(/#learn\/02\/1$/);
+  await page.goto("/#learn/02/2");
+  await page.goto("/");
+  await page.locator(".continue-section .primary-button").click();
+  await expect(page).toHaveURL(/#learn\/02\/2$/);
+});
+
+test("live guide never certifies empty or failed snapshots", async ({ page }) => {
+  await page.route("**/lab-api/**", (route) => route.fulfill({
+    json: { ok: true, output: JSON.stringify({ items: [] }) },
+  }));
+  await page.goto("/#cluster");
+  await page.locator(".live-guide summary").click();
+  await expect(page.getByText("尚未读取实机数据。", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "读取练习环境", exact: true }).click();
+  await expect(page.getByText("当前快照还未满足就绪条件。查看需关注的资源，再结合事件定位原因。")).toBeVisible();
+  await expect(page.getByText("本次快照：节点与示例应用就绪。", { exact: false })).toHaveCount(0);
+});
+
 test("beginner landing and explicit simulation survive narrow Android screens", async ({
   page,
 }) => {

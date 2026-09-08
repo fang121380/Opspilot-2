@@ -1748,6 +1748,13 @@ dialog::backdrop {
     margin: 6px 0 0;
   }
 }
+.live-guide { margin: 16px 0 24px; border-block: 1px solid var(--border); padding: 16px 0; }
+.live-guide summary { cursor: pointer; color: var(--accent); font-weight: 600; line-height: 1.6; }
+.live-guide .instructions { max-width: 900px; }
+.live-guide p { color: var(--secondary); line-height: 1.7; }
+.live-guide code { overflow-wrap: anywhere; }
+.live-guide button { margin: 8px 0; }
+.page-footer > span { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

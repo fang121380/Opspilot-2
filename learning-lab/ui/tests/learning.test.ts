@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { lessons } from "../src/curriculum.ts";
 import { normalizeCommand, runSimulatedCommand } from "../src/terminal.ts";
-import { canCompleteLesson, emptyProgress, parseProgress, verifyLesson, type LessonProgress } from "../src/learning.ts";
+import { canCompleteLesson, emptyProgress, parseProgress, recordLessonCommand, verifyLesson, type LessonProgress } from "../src/learning.ts";
 
 test("simulation returns example outputs without claiming local installation", () => {
   for (const command of ["docker --version", "kind version", "kubectl version --client", "docker run --rm hello-world"]) {
@@ -183,5 +183,66 @@ test("each lesson command runs and every quiz includes evidence to interpret", (
         assert.match(command, /--context kind-k8s-lab/, command);
       }
     }
+  }
+});
+
+test("successful review retains earned completion and survives reload", () => {
+  for (const lesson of lessons) {
+    let progress: LessonProgress = {
+      ...emptyProgress, concept: true, quiz: true, verified: true, completed: true, lastStep: 1,
+      commands: lesson.commands.map(({ command }) => command),
+      records: lesson.commands.map(({ command }) => ({ command, ...runSimulatedCommand(command) })),
+    };
+    for (const { command } of lesson.commands) {
+      const before = JSON.stringify(progress);
+      const next = recordLessonCommand(lesson, progress, { command: `  ${command}  `, ...runSimulatedCommand(command) });
+      assert.equal(JSON.stringify(progress), before, "recording does not mutate previous state");
+      assert.equal(next.verified, true, lesson.id);
+      assert.equal(next.completed, true, lesson.id);
+      assert.equal(next.records.length, lesson.commands.length);
+      assert.equal(next.lastStep, 1);
+      progress = parseProgress(JSON.stringify({ [lesson.id]: next }))[lesson.id];
+      assert.equal(progress.completed, true, "review credit persists across reload");
+    }
+  }
+});
+
+test("failed or incorrect review evidence invalidates credit and cannot silently restore it", () => {
+  for (const attempt of [
+    { command: "docker --version", ok: false, output: "Docker version unavailable" },
+    { command: "docker --version", ok: true, output: "Client Version: v1.34.0" },
+  ]) {
+    const next = recordLessonCommand(lessons[0], completedExample(), attempt);
+    assert.equal(next.verified, false);
+    assert.equal(next.completed, false);
+    assert.equal(verifyLesson(lessons[0], next).passed, false);
+    const recovered = recordLessonCommand(lessons[0], next, {
+      command: "docker --version", ...runSimulatedCommand("docker --version"),
+    });
+    assert.equal(verifyLesson(lessons[0], recovered).passed, true);
+    assert.equal(recovered.verified, false);
+    assert.equal(recovered.completed, false);
+  }
+});
+
+test("recording cannot grant unearned credit or consume another lesson's command", () => {
+  const progress = completedExample();
+  assert.equal(recordLessonCommand(lessons[0], progress, { command: "docker ps", ok: true, output: "CONTAINER ID" }), progress);
+  for (const change of [{ verified: false, completed: false }, { concept: false }, { quiz: false }, { records: [] }]) {
+    const next = recordLessonCommand(lessons[0], { ...progress, ...change }, {
+      command: "docker --version", ...runSimulatedCommand("docker --version"),
+    });
+    assert.equal(next.completed, false);
+  }
+});
+
+test("saved lesson step accepts only integers within the three-step lesson", () => {
+  for (const lastStep of [0, 1, 2]) {
+    assert.equal(parseProgress(JSON.stringify({ "00": { ...completedExample(), lastStep } }))["00"].lastStep, lastStep);
+  }
+  for (const lastStep of [undefined, null, "1", false, -1, 3, 1.5, {}, []]) {
+    const restored = parseProgress(JSON.stringify({ "00": { ...completedExample(), lastStep } }))["00"];
+    assert.equal(restored.lastStep, undefined);
+    assert.equal(restored.completed, true);
   }
 });

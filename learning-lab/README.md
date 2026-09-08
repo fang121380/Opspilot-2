@@ -12,7 +12,7 @@ A React browser workbench for Docker, Kind, Kubernetes, and evidence-based troub
 | 学习集群 / Live cluster | 固定目标的只读资源、节点、事件、日志 / Read-only resources, nodes, events, logs | Python >=3.12, kubectl, Docker, Kind, `k8s-lab` |
 | 真实事故 / Live incidents | 可选的 Opspilot 事故列表 / Optional Opspilot incident list | 单独启动主 API 及其依赖 / Main API and its dependencies |
 
-课程按“理解概念 → 练习命令 → 判断证据”分为三步，五课均可直接进入。完成课程需要概念阅读、本课命令记录自检和证据小测通过。模拟版本输出不能证明本机安装成功，模拟完成也不等于实机验收。
+课程按“理解概念 → 练习命令 → 判断证据”分为三步，五课均可直接进入。完成课程需要概念阅读、本课命令记录自检和证据小测通过。页面会保存上次学习的课程与步骤；已完成课程可复习，重新运行正确的模拟命令不会取消完成成绩。模拟版本输出不能证明本机安装成功，模拟完成也不等于实机验收。
 
 Each lesson has three navigable steps: understand concepts, practice commands, and judge evidence. All five lessons are available. Completion requires reading, verification of that lesson's command records, and its evidence quiz. Simulated versions do not prove local installation; simulated completion is separate from real lab acceptance.
 
@@ -111,7 +111,11 @@ LAN visitors can read lab data and allowed main-service routes through the web p
 
 The bridge fixes the context to `kind-k8s-lab` and workload namespace to `learning`. Resources, events, and nodes return structured Kubernetes JSON inside the `output` string; logs remain text. Each channel retains its own timestamp, error, and last successful snapshot. One failed request does not discard other results. An empty event list is not proof of health.
 
-进度保存在当前浏览器、当前来源的 localStorage；电脑 localhost、LAN 地址和手机是不同存储空间。旧 `v3` 记录迁移保留有效阅读和命令历史，但无证据的完成状态和旧题目的小测通过状态会重置。新记录含课程版本及每课命令输出；存储不可用时只能保留当前会话进度。
+进度保存在当前浏览器、当前来源的 localStorage；电脑 localhost、LAN 地址和手机是不同存储空间。旧 `v3` 记录迁移保留有效阅读和命令历史，但无证据的完成状态和旧题目的小测通过状态会重置。新记录含课程版本、上次学习步骤及每课命令输出；存储不可用时只能保留当前会话进度。
+
+错误输入课程命令时，终端会说明可能的拼写、学习集群或命名空间范围，并给出可核对的命令；建议不会自动运行。包含删除、写入、管道、重定向、多行输入或其他 Shell 结构的命令全部不会执行。
+
+真实练习从“学习集群”页面的“第一次做实机练习”展开说明开始：先准备 Docker 和 `k8s-lab`，再读取节点与 `hello-web` 的快照，最后对照资源、事件和日志。页面显示“本次快照就绪”只代表已读取的节点和示例工作负载状态；业务访问验证仍需按页面指引在系统终端单独执行。
 
 Progress is browser-local and origin-specific. Desktop localhost, LAN URLs, and the phone do not share storage. Migration of old `v3` data retains valid reading and command history but clears unsupported completion and obsolete quiz credit. New records include curriculum version and per-lesson output. Unavailable storage limits progress to the current session.
 

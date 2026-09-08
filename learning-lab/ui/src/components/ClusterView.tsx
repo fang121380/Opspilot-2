@@ -64,6 +64,43 @@ export function ClusterView({
         <span className="badge good">实机只读</span>
         <span>只读取学习集群，不运行课程命令或修改资源。</span>
       </div>
+      <details className="live-guide">
+        <summary>第一次做实机练习：从准备环境到读懂结果</summary>
+        <ol className="instructions">
+          <li>
+            <strong>准备环境</strong>
+            <p>在运行工作台的电脑上打开 Docker Desktop，等待引擎就绪。浏览器中的模拟版本号不能证明工具已经安装。</p>
+            <p>没有学习集群时，在仓库根目录的系统终端运行下列对应命令。它会创建学习集群并部署 hello-web；已有实操现场时不要反复初始化。</p>
+            <p>macOS：<code>bash learning-lab/scripts/lab.sh up</code></p>
+            <p>Windows：<code>.\learning-lab\windows\Start-LearningLab.ps1 -StartUi -StartApi</code></p>
+            <p>目标是看到 hello-web 两个副本就绪。Docker 未启动、镜像下载失败时，先解决终端报错，再读取状态。</p>
+          </li>
+          <li>
+            <strong>读取真实状态</strong>
+            <p>连接后核对 kind-k8s-lab 的节点为 Ready，learning 中 hello-web 的 Deployment 可用且 Pod 就绪。Running 只说明阶段，还要看容器就绪数。</p>
+            <button className="secondary-button" onClick={refresh} disabled={loading}>
+              <RefreshCw />{loading ? "正在读取" : "读取练习环境"}
+            </button>
+            <p role="status">
+              {data.resources.error || data.nodes.error
+                ? "本次读取失败，上次结果不能用于本次验收。请查看页面中的具体原因。"
+                : data.resources.output === null || data.nodes.output === null
+                  ? "尚未读取实机数据。"
+                  : nodes.length > 0 && nodes.every((node) => node.ready)
+                    && resources.some((resource) => resource.kind === "Deployment" && resource.name === "hello-web" && resource.tone === "good")
+                    && resources.some((resource) => resource.kind === "Pod")
+                    && resources.filter((resource) => resource.kind === "Pod").every((resource) => resource.tone === "good")
+                    ? "本次快照：节点与示例应用就绪。继续检查事件和日志，业务访问仍需单独验证。"
+                    : "当前快照还未满足就绪条件。查看需关注的资源，再结合事件定位原因。"}
+            </p>
+          </li>
+          <li>
+            <strong>对照证据</strong>
+            <p>依次查看“资源、事件、日志”。记录资源名、状态和同步时间；空事件列表不代表应用健康。日志读取失败时，资源查询结果仍可用于判断。</p>
+            <p>在电脑系统终端独立核对：<code>kubectl --context kind-k8s-lab -n learning get pods</code>。名称和就绪数应与最近一次页面快照对应。</p>
+          </li>
+        </ol>
+      </details>
       <div className="cluster-summary">
         <div>
           <Server />

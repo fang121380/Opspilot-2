@@ -1,0 +1,41 @@
+{
+  "target": "http://127.0.0.1:5173",
+  "desktop": {
+    "title": "Opspilot 学习工作台",
+    "url": "http://127.0.0.1:5173/",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "bodyTextLength": 728,
+    "bodyTextSample": "跳到主要内容 Opspilot 云原生学习工作台 本地学习环境 学习首页 课程练习 0/5 学习集群 故障案例 课程目录 1 环境检查 2 Docker 基础 3 Kind 集群 4 读懂应用部署 5 故障排查 课程进度保存在当前浏览器 重置学习进度 学习工作台 理解容器与集群，练习读取状态，再用证据判断故障。 Docker · Kind · Kubernetes 从认识三个工具开始 0 / 5 环境检查 · 10 分钟 · 认识并检查 Docker、Kind、kubectl",
+    "horizontalScroll": false,
+    "scrollWidth": 1425,
+    "textOverflow": [],
+    "smallButtons": [],
+    "blockingFixed": [],
+    "hasMain": true,
+    "screenshotPath": "/Users/andrew/Documents/Codex/2026-08-27/fen/.design/screenshots/resumed-learning-final-desktop.png",
+    "screenshotBytes": 161879,
+    "blankRisk": false
+  },
+  "mobile": {
+    "title": "Opspilot 学习工作台",
+    "url": "http://127.0.0.1:5173/",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "bodyTextLength": 587,
+    "bodyTextSample": "跳到主要内容 Opspilot 云原生学习工作台 学习工作台 理解容器与集群，练习读取状态，再用证据判断故障。 从认识三个工具开始 0 / 5 环境检查 · 10 分钟 · 认识并检查 Docker、Kind、kubectl 开始第一课 Docker 运行容器 Kind 用容器创建练习集群 Kubernetes 管理应用的期望状态 五课学习路径 建议按顺序学习，也可以随时复习 01 环境检查 读懂三个工具的模拟版本输出，区分客户端存在、容器引擎可用和集群连通。 02 Dock",
+    "horizontalScroll": false,
+    "scrollWidth": 390,
+    "textOverflow": [],
+    "smallButtons": [],
+    "blockingFixed": [],
+    "hasMain": true,
+    "screenshotPath": "/Users/andrew/Documents/Codex/2026-08-27/fen/.design/screenshots/resumed-learning-final-mobile.png",
+    "screenshotBytes": 69951,
+    "blankRisk": false
+  }
+}

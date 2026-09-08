@@ -11,6 +11,7 @@ import {
 import type { Lesson } from "../curriculum";
 import {
   canCompleteLesson,
+  recordLessonCommand,
   verifyLesson,
   type LessonProgress,
 } from "../learning";
@@ -52,7 +53,7 @@ export function LessonView({
   const run = (raw: string) => {
     const command = normalizeCommand(raw);
     if (!command) return;
-    const result = runSimulatedCommand(command);
+    const result = runSimulatedCommand(raw);
     if (result.output === "__CLEAR__") {
       setDisplayRecords([]);
       setFeedback("清空显示不会删除本课验收记录。");
@@ -67,18 +68,7 @@ export function LessonView({
       (item) => normalizeCommand(item.command) === command,
     );
     if (isLessonCommand) {
-      const records = [
-        ...progress.records.filter((record) => record.command !== command),
-        { command, ...result },
-      ];
-      onUpdate({
-        records,
-        commands: records
-          .filter((record) => record.ok)
-          .map((record) => record.command),
-        verified: false,
-        completed: false,
-      });
+      onUpdate(recordLessonCommand(lesson, progress, { command, ...result }));
     }
     setFeedback(
       isLessonCommand

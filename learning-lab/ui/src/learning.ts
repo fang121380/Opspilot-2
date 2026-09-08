@@ -12,6 +12,7 @@ export type LessonProgress = {
   verified: boolean;
   quiz: boolean;
   completed: boolean;
+  lastStep?: number;
 };
 
 export const emptyProgress: LessonProgress = {
@@ -62,6 +63,9 @@ export function parseProgress(raw: string | null): Record<string, LessonProgress
       quiz: entry.curriculumVersion === CURRENT_CURRICULUM_VERSION && entry.quiz === true,
       completed: false,
     };
+    if (typeof entry.lastStep === "number" && Number.isInteger(entry.lastStep) && entry.lastStep >= 0 && entry.lastStep <= 2) {
+      progress.lastStep = entry.lastStep;
+    }
     progress.verified = entry.verified === true && verifyLesson(lesson, progress).passed;
     progress.completed = entry.completed === true && canCompleteLesson(lesson, progress);
     restored[lesson.id] = progress;
@@ -88,4 +92,25 @@ export function verifyLesson(lesson: Lesson, progress: LessonProgress): { passed
 
 export function canCompleteLesson(lesson: Lesson, progress: LessonProgress): boolean {
   return progress.concept && progress.quiz && progress.verified && verifyLesson(lesson, progress).passed;
+}
+
+export function recordLessonCommand(lesson: Lesson, progress: LessonProgress, attempt: CommandRecord): LessonProgress {
+  const command = normalizeCommand(attempt.command);
+  if (!lesson.commands.some((item) => normalizeCommand(item.command) === command)) return progress;
+
+  const records = [
+    ...progress.records.filter((record) => normalizeCommand(record.command) !== command),
+    { ...attempt, command },
+  ];
+  const next: LessonProgress = {
+    ...progress,
+    records,
+    commands: records.filter((record) => record.ok).map((record) => record.command),
+    verified: false,
+    completed: false,
+  };
+  // Repeating a valid exercise retains earned credit; new work still needs explicit verification.
+  next.verified = progress.verified && verifyLesson(lesson, progress).passed && verifyLesson(lesson, next).passed;
+  next.completed = progress.completed && canCompleteLesson(lesson, progress) && canCompleteLesson(lesson, next);
+  return next;
 }

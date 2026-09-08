@@ -63,6 +63,10 @@ export function App() {
     null,
   );
   const [storageError, setStorageError] = useState(false);
+  const [lastLesson, setLastLesson] = useState(() => {
+    const saved = stored("opspilot-last-lesson");
+    return lessons.some((lesson) => lesson.id === saved) ? saved! : "00";
+  });
   const lab = useLabData();
   const selected =
     lessons.find((lesson) => lesson.id === route.lesson) ?? lessons[0];
@@ -71,9 +75,22 @@ export function App() {
   const done = lessons.filter(
     (lesson) => progress[lesson.id]?.completed,
   ).length;
-  const navigate = (view: View, lesson = route.lesson, step = 0) => {
-    location.hash = view === "learn" ? `learn/${lesson}/${step}` : view;
+  const navigate = (view: View, lesson = route.lesson, step?: number) => {
+    const saved = progress[lesson];
+    const nextStep = step ?? saved?.lastStep ?? (saved?.verified ? 2 : saved?.concept ? 1 : 0);
+    location.hash = view === "learn" ? `learn/${lesson}/${nextStep}` : view;
   };
+  useEffect(() => {
+    if (route.view !== "learn") return;
+    setLastLesson(route.lesson);
+    try { localStorage.setItem("opspilot-last-lesson", route.lesson); } catch { /* Session only. */ }
+    setProgress((value) => {
+      const entry = value[route.lesson] ?? emptyProgress;
+      return entry.lastStep === route.step ? value : {
+        ...value, [route.lesson]: { ...entry, lastStep: route.step },
+      };
+    });
+  }, [route.view, route.lesson, route.step]);
   useEffect(() => {
     const update = () => {
       setRoute(readRoute());
@@ -109,7 +126,8 @@ export function App() {
     navigate(next ? "learn" : "incidents", next?.id ?? route.lesson);
   };
   const nextLesson =
-    lessons.find((lesson) => !progress[lesson.id]?.completed) ?? lessons[0];
+    lessons.find((lesson) => lesson.id === lastLesson && !progress[lesson.id]?.completed)
+    ?? lessons.find((lesson) => !progress[lesson.id]?.completed) ?? lessons[0];
   return (
     <div className={`app-shell ${theme}`}>
       <a
@@ -224,6 +242,7 @@ export function App() {
           {route.view === "overview" && (
             <Overview
               progress={progress}
+              nextLessonId={nextLesson.id}
               onLesson={(id) => navigate("learn", id)}
               onCluster={() => navigate("cluster")}
               onCase={() => navigate("incidents")}
@@ -244,7 +263,7 @@ export function App() {
           {route.view === "cluster" && <ClusterView {...lab} />}
           {route.view === "incidents" && <IncidentView />}
           <footer className="page-footer">
-            <span>Opspilot Learning Lab</span>
+            <span title="Git 提交标识及提交时间">Opspilot · {__WORKBENCH_VERSION__} · {__WORKBENCH_COMMITTED_AT__}</span>
             <button className="text-button" onClick={() => setModal("phone")}>
               <Smartphone />
               手机访问
@@ -288,6 +307,8 @@ export function App() {
               className="danger-button"
               onClick={() => {
                 setProgress({});
+                setLastLesson("00");
+                try { localStorage.removeItem("opspilot-last-lesson"); } catch { /* Session only. */ }
                 setModal(null);
                 navigate("overview");
               }}

@@ -12,11 +12,13 @@ import type { LessonProgress } from "../learning";
 
 export function Overview({
   progress,
+  nextLessonId,
   onLesson,
   onCluster,
   onCase,
 }: {
   progress: Record<string, LessonProgress>;
+  nextLessonId: string;
   onLesson: (id: string) => void;
   onCluster: () => void;
   onCase: () => void;
@@ -25,7 +27,7 @@ export function Overview({
     (lesson) => progress[lesson.id]?.completed,
   ).length;
   const next =
-    lessons.find((lesson) => !progress[lesson.id]?.completed) ?? lessons[0];
+    lessons.find((lesson) => lesson.id === nextLessonId) ?? lessons[0];
   return (
     <>
       <div className="page-heading">
@@ -54,6 +56,9 @@ export function Overview({
           <p>
             {next.title} · {next.duration} · {next.subtitle}
           </p>
+          {progress[next.id]?.lastStep !== undefined && count !== 5 && (
+            <p className="metadata">上次停在：{["理解概念", "练习命令", "判断证据"][progress[next.id].lastStep!]}</p>
+          )}
         </div>
         <button className="primary-button" onClick={() => onLesson(next.id)}>
           {count === 5 ? "复习课程" : count ? "继续学习" : "开始第一课"}

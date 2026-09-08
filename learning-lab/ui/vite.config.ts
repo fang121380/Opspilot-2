@@ -1,5 +1,16 @@
 import { defineConfig, type Connect, type Plugin, type ProxyOptions } from "vite";
 import react from "@vitejs/plugin-react";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+function revision(format: string, fallback: string) {
+  try {
+    return execFileSync("git", ["log", "-1", `--format=${format}`], {
+      cwd: fileURLToPath(new URL(".", import.meta.url)),
+      encoding: "utf8", timeout: 2000, stdio: ["ignore", "pipe", "ignore"],
+    }).trim() || fallback;
+  } catch { return fallback; }
+}
 
 const readOnlyGuard: Connect.NextHandleFunction = (request, response, next) => {
   const raw = request.url ?? "/";
@@ -67,6 +78,10 @@ const proxy: Record<string, ProxyOptions> = {
 };
 
 export default defineConfig({
+  define: {
+    __WORKBENCH_VERSION__: JSON.stringify(revision("%h", "source-export")),
+    __WORKBENCH_COMMITTED_AT__: JSON.stringify(revision("%cI", "提交时间未知")),
+  },
   plugins: [react(), readOnlyWorkbenchApi()],
   server: { host: "127.0.0.1", port: 5173, strictPort: true, proxy },
   preview: { host: "127.0.0.1", port: 4173, strictPort: true, proxy },
