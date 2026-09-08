@@ -42,6 +42,42 @@ bash learning-lab/scripts/open-workbench-macos.sh
 
 Logs are under `learning-lab/.workbench-logs/`. Providing macOS source does not claim Mac device validation or an installed desktop `.app`.
 
+## 多电脑更新 / Update Across Computers
+
+在修改代码的电脑上先提交并推送 GitHub；在另一台电脑使用“更新并打开”。此操作同步仓库代码，重新安装前端锁定依赖、构建并重启工作台，不同步浏览器进度或集群数据，也不会代替你提交本地修改。
+
+Commit and push from the computer where you edited the code. On the other computer, use update-and-open to fetch code, install locked frontend dependencies, build, and restart the workbench. Browser progress and cluster data remain separate. The updater never commits or pushes your edits.
+
+macOS 从仓库根目录执行以下命令，即可在桌面创建“Opspilot 更新并打开.app”。双击会打开终端显示更新结果，再打开浏览器。本台 Mac 已于 2026-09-08 验证桌面启动；其他 Mac 安装时会自动记录各自的仓库路径。
+
+On macOS, create a checkout-specific desktop shortcut with the following command. Double-clicking shows the update log in Terminal, then opens the browser. The desktop workflow was verified on this Mac on 2026-09-08; each installation resolves its own checkout path.
+
+```bash
+python3 learning-lab/scripts/install-update-shortcut-macos.py
+# 需要保留局域网分享时安装 / To keep LAN sharing enabled:
+# python3 learning-lab/scripts/install-update-shortcut-macos.py --lan
+```
+
+也可以直接运行 / Or run directly:
+
+```bash
+bash learning-lab/scripts/update-workbench-macos.sh
+```
+
+Windows / On Windows:
+
+```powershell
+.\learning-lab\windows\Update-LearningLab.ps1
+```
+
+更新仅接受本仓库 `origin/main` 的快进更新。无冲突的本地修改会保留；同文件或目录冲突、本地未推送提交、分叉、其他分支或 GitHub 认证失败都会停止，并保留原始内容。请把错误交给 Codex 处理，不要使用强制覆盖。Git 网络请求最多等待 60 秒；Mac 依赖安装和构建分别最多等待 300/180 秒。依赖失败后代码已经更新但服务可能停止，再次运行即可重试。普通桌面启动图标不会检查更新。
+
+Only fast-forward updates of this repository's `origin/main` are accepted. Unrelated local edits are preserved. File/directory conflicts, unpushed or diverged commits, other branches, and authentication failures stop the update with your files intact. Ask Codex to resolve the reported issue instead of forcing an overwrite. Git requests time out after 60 seconds; Mac installation/build limits are 300/180 seconds. Dependency failures can leave updated code with stopped services; rerun to retry. The ordinary desktop launcher does not check GitHub.
+
+Mac 更新日志：`learning-lab/.workbench-logs/update.log`。意外关机留下 `update.lock` 时，先确认没有更新进程，再请 Codex 清理该锁。Windows 更新脚本本轮仅做静态检查，尚未在 Windows 实机验证。
+
+Mac update log: `learning-lab/.workbench-logs/update.log`. If interruption leaves `update.lock`, confirm no updater is running before asking Codex to remove that lock. The Windows update wrapper has only static review in this delivery; Windows device validation remains outstanding.
+
 ## Android 同一 Wi-Fi / Android on the Same Wi-Fi
 
 电脑和手机连接同一可信 Wi-Fi，选择一种启动方式 / Join the same trusted Wi-Fi and choose one launch method:

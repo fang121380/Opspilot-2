@@ -28,6 +28,26 @@ This script installs Docker Desktop, Git, kind, kubectl, Node.js, and Python thr
 
 Startup creates `k8s-lab` when missing, applies the `learning/hello-web` sample to `kind-k8s-lab`, waits for readiness, then starts or reuses the UI and bridge. These are real Kubernetes writes. Open the [workbench](http://127.0.0.1:5173); logs are under `learning-lab/.workbench-logs/`.
 
+## 更新并打开 / Update and Open
+
+另一台电脑修改完成并推送 GitHub 后，在这台 Windows 电脑的 `learning-lab/windows` 目录执行：
+
+After pushing changes from your other computer to GitHub, run from this Windows checkout's `learning-lab/windows` directory:
+
+```powershell
+.\Update-LearningLab.ps1
+# 需要同一局域网访问时 / For LAN access:
+.\Update-LearningLab.ps1 -Lan
+```
+
+更新脚本会安全同步仓库，确认端口归属后停止本目录的网页和桥接进程，运行 `npm ci` 和构建，再启动学习集群、网页、桥接并验证后打开浏览器。它复用上述启动脚本，因此同样会创建缺失的学习集群并应用示例资源；请先启动 Docker Desktop。首次部署仍使用安装步骤，更新命令不负责安装系统工具。
+
+The updater safely synchronizes Git, verifies port ownership before stopping this checkout's UI and bridge, runs `npm ci` and the build, then starts the lab, UI and bridge and opens the browser after verification. It reuses the startup script, including creating a missing learning cluster and applying sample resources, so start Docker Desktop first. Use the installation steps for first-time setup; this command does not install system tools.
+
+本地修改、冲突或分叉的处理结果会显示在终端，请保留提示中的恢复信息。若端口被别的项目占用，脚本会停止更新启动流程，不会终止未知进程；安装或构建失败时不会打开旧版冒充更新成功。学习进度仍保存在各自浏览器，容器和集群仍属于各自电脑。
+
+The terminal reports how local changes, conflicts or diverged history were handled; keep any recovery instructions. An unknown port owner stops the launch workflow without terminating that process. Failed installation or builds do not open the old version as a successful update. Learning progress remains browser-local, and containers and clusters remain computer-local.
+
 ## Android 访问 / Android Access
 
 电脑和 Android 接入同一可信 Wi-Fi，从 `learning-lab/windows` 执行 / Join the same trusted Wi-Fi, then run from `learning-lab/windows`:
