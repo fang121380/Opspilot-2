@@ -85,10 +85,17 @@ export function LessonView({
       onStep(2);
     } else
       setFeedback(
-        `请先完成本课全部命令并检查输出。${result.missingCommands.length ? `还有 ${result.missingCommands.length} 条命令未完成。` : "部分输出缺少预期证据。"}`,
+        result.missingCommands.length
+          ? `请根据上方列表补齐记录。还有 ${result.missingCommands.length} 条命令未完成。`
+          : `命令都已运行，但有 ${result.missingEvidence.length} 条证据未在对应输出中找到。请对照每条命令下的预期结果。`,
       );
   };
   const selectedAnswer = progress.quiz ? lesson.quiz.correct : answer;
+  const completedCommandCount = lesson.commands.filter((item) =>
+    progress.records.some(
+      (record) => record.command === normalizeCommand(item.command) && record.ok,
+    ),
+  ).length;
   return (
     <>
       <div className="page-heading">
@@ -175,7 +182,7 @@ export function LessonView({
           <div className="section-title">
             <h2>用命令读取信息</h2>
             <span className="metadata">
-              {progress.commands.length} / {lesson.commands.length} 条完成
+              {completedCommandCount} / {lesson.commands.length} 条完成
             </span>
           </div>
           <div className="command-list">
