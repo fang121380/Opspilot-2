@@ -10,15 +10,15 @@ The interface prioritizes reading, command output, and evidence interpretation. 
 
 | 视图 / View | 内容 / Content |
 | --- | --- |
-| 学习首页 / Overview | 继续学习、五课目录、模拟与实机入口 / Resume, five lessons, learning modes |
+| 学习首页 / Overview | 继续学习、五章 26 课目录、章节筛选与搜索 / Resume, 26 lessons by chapter, filters and search |
 | 课程练习 / Lessons | 理解概念、练习命令、判断证据 / Concepts, commands, evidence |
 | 学习集群 / Cluster | 实机资源、事件、日志，以及节点摘要 / Live resources, events, logs, node summary |
 | 故障案例 / Cases | 三阶段模拟就绪探针案例、可选真实事故列表 / Three-stage readiness case, optional live incidents |
-| 共享弹窗 / Dialogs | 可搜索术语与资料、重置、手机访问 / Searchable glossary, reset, phone access |
+| 共享弹窗 / Dialogs | 可搜索术语与资料、本章实机手册、重置、手机访问 / Glossary, chapter manuals, reset, phone access |
 
-所有课程可进入，完成标记不承担导航锁。课程三步可来回切换，哈希路由保留课程和步骤并支持浏览器返回。主要按钮对应当前步骤的下一项动作；完成按钮仅在阅读、记录自检和小测通过后启用。
+所有课程可进入，完成标记不承担导航锁。课程三步可来回切换，哈希路由保留课程和步骤并支持浏览器返回。主要按钮对应当前步骤的下一项动作；完成按钮仅在阅读、记录自检和小测通过后启用；深入课程还要求分析笔记和逐项自评。桌面目录按章折叠，当前章节默认展开。
 
-All lessons remain navigable regardless of completion. Three lesson steps support backtracking; hash routes preserve the selected lesson and step with browser history. Primary actions follow the current task; completion requires reading, record verification, and the quiz.
+All lessons remain navigable regardless of completion. Three lesson steps support backtracking; hash routes preserve the selected lesson and step with browser history. Primary actions follow the current task; completion requires reading, record verification, and the quiz; extended lessons also require a reflection and acceptance checklist. The desktop directory collapses by chapter and opens the active chapter.
 
 ## 响应式与可访问性 / Responsive and Accessible Behavior
 

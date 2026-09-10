@@ -5,10 +5,12 @@ export function Modal({
   title,
   onClose,
   children,
+  wide = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  wide?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -22,13 +24,14 @@ export function Modal({
   }, []);
   return (
     <dialog
+      className={wide ? "manual-dialog" : undefined}
       ref={dialog}
       aria-label={title}
       onKeyDownCapture={(event) => {
         if (event.key === "Tab") {
           const elements = Array.from(
             event.currentTarget.querySelectorAll<HTMLElement>(
-              'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]',
+              'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], summary, [tabindex="0"]',
             ),
           ).filter((element) => element.getClientRects().length > 0);
           const first = elements[0];

@@ -14,8 +14,13 @@ import {
   Sun,
   Trash2,
 } from "lucide-react";
-import { glossary, lessons } from "./curriculum";
-import { emptyProgress, parseProgress, type LessonProgress } from "./learning";
+import { glossary, lessons, modules } from "./curriculum";
+import {
+  canCompleteLesson,
+  emptyProgress,
+  parseProgress,
+  type LessonProgress,
+} from "./learning";
 import { useLabData } from "./useLabData";
 import { Overview } from "./components/Overview";
 import { LessonView } from "./components/LessonView";
@@ -77,18 +82,26 @@ export function App() {
   ).length;
   const navigate = (view: View, lesson = route.lesson, step?: number) => {
     const saved = progress[lesson];
-    const nextStep = step ?? saved?.lastStep ?? (saved?.verified ? 2 : saved?.concept ? 1 : 0);
+    const nextStep =
+      step ?? saved?.lastStep ?? (saved?.verified ? 2 : saved?.concept ? 1 : 0);
     location.hash = view === "learn" ? `learn/${lesson}/${nextStep}` : view;
   };
   useEffect(() => {
     if (route.view !== "learn") return;
     setLastLesson(route.lesson);
-    try { localStorage.setItem("opspilot-last-lesson", route.lesson); } catch { /* Session only. */ }
+    try {
+      localStorage.setItem("opspilot-last-lesson", route.lesson);
+    } catch {
+      /* Session only. */
+    }
     setProgress((value) => {
       const entry = value[route.lesson] ?? emptyProgress;
-      return entry.lastStep === route.step ? value : {
-        ...value, [route.lesson]: { ...entry, lastStep: route.step },
-      };
+      return entry.lastStep === route.step
+        ? value
+        : {
+            ...value,
+            [route.lesson]: { ...entry, lastStep: route.step },
+          };
     });
   }, [route.view, route.lesson, route.step]);
   useEffect(() => {
@@ -116,18 +129,22 @@ export function App() {
     }
   }, [theme]);
   const update = (patch: Partial<LessonProgress>) =>
-    setProgress((value) => ({
-      ...value,
-      [selected.id]: { ...(value[selected.id] ?? emptyProgress), ...patch },
-    }));
+    setProgress((value) => {
+      const next = { ...(value[selected.id] ?? emptyProgress), ...patch };
+      next.completed = next.completed && canCompleteLesson(selected, next);
+      return { ...value, [selected.id]: next };
+    });
   const complete = () => {
     update({ completed: true });
     const next = lessons[index + 1];
     navigate(next ? "learn" : "incidents", next?.id ?? route.lesson);
   };
   const nextLesson =
-    lessons.find((lesson) => lesson.id === lastLesson && !progress[lesson.id]?.completed)
-    ?? lessons.find((lesson) => !progress[lesson.id]?.completed) ?? lessons[0];
+    lessons.find(
+      (lesson) => lesson.id === lastLesson && !progress[lesson.id]?.completed,
+    ) ??
+    lessons.find((lesson) => !progress[lesson.id]?.completed) ??
+    lessons[0];
   return (
     <div className={`app-shell ${theme}`}>
       <a
@@ -199,7 +216,9 @@ export function App() {
                 <item.icon />
                 {item.label}
                 {item.id === "learn" && (
-                  <span className="nav-count">{done}/5</span>
+                  <span className="nav-count">
+                    {done}/{lessons.length}
+                  </span>
                 )}
               </button>
             ))}
@@ -207,21 +226,41 @@ export function App() {
           <div className="sidebar-section">
             <span>课程目录</span>
             <div className="lesson-nav">
-              {lessons.map((lesson, position) => (
-                <button
-                  className={
-                    route.view === "learn" && lesson.id === route.lesson
-                      ? "selected"
-                      : ""
-                  }
-                  key={lesson.id}
-                  onClick={() => navigate("learn", lesson.id)}
+              {modules.map((module) => (
+                <details
+                  key={module.id}
+                  open={selected.module === module.id}
+                  className="chapter-nav"
                 >
-                  <span>
-                    {progress[lesson.id]?.completed ? <Check /> : position + 1}
-                  </span>
-                  <span>{lesson.title}</span>
-                </button>
+                  <summary>{module.title}</summary>
+                  {lessons
+                    .filter((lesson) => lesson.module === module.id)
+                    .map((lesson) => (
+                      <button
+                        className={
+                          route.view === "learn" && lesson.id === route.lesson
+                            ? "selected"
+                            : ""
+                        }
+                        aria-current={
+                          route.view === "learn" && lesson.id === route.lesson
+                            ? "page"
+                            : undefined
+                        }
+                        key={lesson.id}
+                        onClick={() => navigate("learn", lesson.id)}
+                      >
+                        <span>
+                          {progress[lesson.id]?.completed ? (
+                            <Check />
+                          ) : (
+                            lessons.indexOf(lesson) + 1
+                          )}
+                        </span>
+                        <span>{lesson.title}</span>
+                      </button>
+                    ))}
+                </details>
               ))}
             </div>
           </div>
@@ -258,12 +297,17 @@ export function App() {
               onUpdate={update}
               onComplete={complete}
               onGlossary={() => setModal("glossary")}
+              allProgress={progress}
+              onLesson={(id) => navigate("learn", id, 0)}
+              onCatalog={() => navigate("overview")}
             />
           )}
           {route.view === "cluster" && <ClusterView {...lab} />}
           {route.view === "incidents" && <IncidentView />}
           <footer className="page-footer">
-            <span title="Git 提交标识及提交时间">Opspilot · {__WORKBENCH_VERSION__} · {__WORKBENCH_COMMITTED_AT__}</span>
+            <span title="Git 提交标识及提交时间">
+              Opspilot · {__WORKBENCH_VERSION__} · {__WORKBENCH_COMMITTED_AT__}
+            </span>
             <button className="text-button" onClick={() => setModal("phone")}>
               <Smartphone />
               手机访问
@@ -308,7 +352,11 @@ export function App() {
               onClick={() => {
                 setProgress({});
                 setLastLesson("00");
-                try { localStorage.removeItem("opspilot-last-lesson"); } catch { /* Session only. */ }
+                try {
+                  localStorage.removeItem("opspilot-last-lesson");
+                } catch {
+                  /* Session only. */
+                }
                 setModal(null);
                 navigate("overview");
               }}

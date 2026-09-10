@@ -1,3 +1,5 @@
+import { lessons } from "./curriculum.ts";
+
 export type CommandResult = {
   ok: boolean;
   output: string;
@@ -31,6 +33,20 @@ const RESPONSES: Record<string, string> = {
   "kubectl --context kind-k8s-lab -n learning describe pod -l app=hello-web":
     "Name: hello-web-547fffd4fc-b4mnv\nStatus: Running\nContainers:\n  nginx:\n    State: Running\n    Ready: True\nEvents: <none>\n\nName: hello-web-547fffd4fc-j4qrt\nStatus: Running\nContainers:\n  nginx:\n    State: Running\n    Ready: True\nEvents: <none>",
 };
+
+for (const lesson of lessons) {
+  for (const item of lesson.commands) {
+    if (item.output !== undefined) {
+      if (
+        Object.hasOwn(RESPONSES, item.command) &&
+        RESPONSES[item.command] !== item.output
+      ) {
+        throw new Error(`Conflicting lesson snapshot: ${item.command}`);
+      }
+      RESPONSES[item.command] = item.output;
+    }
+  }
+}
 
 export const helpText = [
   "输入 help 查看帮助，输入 clear 清空终端。",

@@ -50,6 +50,8 @@ Follow the Docker -> Kind -> Kubernetes -> troubleshooting path in [`learning-la
 
 Windows 部署见 [`learning-lab/windows/README.md`](learning-lab/windows/README.md)，执行 `Install-All.ps1` 可一键安装所需工具。
 
+学习界面提供五章 26 课的完整应用学习链，覆盖 Docker 构建/网络/存储/Compose、Kind、Kubernetes 发布/配置/存储/探针/权限及综合排障，详见[课程地图](learning-lab/CURRICULUM.md)。电脑端提供章节导航、课程搜索、先修链接、分析笔记和四份内置实机手册。
+
 学习界面支持电脑和安卓浏览器：课程采用“理解概念 → 练习命令 → 判断证据”，课程与故障案例明确使用模拟数据；实机区域通过同源只读代理显示独立的更新时间和错误状态。手机与电脑在同一 Wi-Fi 时，可使用 `npm run dev:lan` 或 Windows 启动脚本的 `-Lan` 选项。手机端为响应式网页，进度保存在当前浏览器，不包含 APK、离线运行或跨设备同步。详见 [学习工作台](learning-lab/README.md)。
 
 The learning UI supports desktop and Android browsers with evidence-based lessons, explicit simulation labels, and independently refreshed read-only cluster data. Use LAN mode on a trusted shared network; this is a responsive web app, not an APK or offline package. Progress is browser-local. See the [workbench guide](learning-lab/README.md).
@@ -82,6 +84,8 @@ The learning UI supports desktop and Android browsers with evidence-based lesson
 - `make demo` 可以无 Docker 演示告警、调查、审批、执行和审计的完整 API 闭环。
 
 ## 当前验证
+
+2026-09-10 桌面学习链扩展：前端 38 项逻辑测试、15 项 Chrome 浏览器测试与构建通过。详见[本次验证记录](docs/workbench-validation-2026-09-10.md)。以下是此前主项目验证基线，不代表本轮重新执行了后端或实机演练。
 
 ```text
 182 个 Python 单元/集成测试通过（Windows，2026-09-05）

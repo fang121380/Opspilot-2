@@ -1748,13 +1748,33 @@ dialog::backdrop {
     margin: 6px 0 0;
   }
 }
-.live-guide { margin: 16px 0 24px; border-block: 1px solid var(--border); padding: 16px 0; }
-.live-guide summary { cursor: pointer; color: var(--accent); font-weight: 600; line-height: 1.6; }
-.live-guide .instructions { max-width: 900px; }
-.live-guide p { color: var(--secondary); line-height: 1.7; }
-.live-guide code { overflow-wrap: anywhere; }
-.live-guide button { margin: 8px 0; }
-.page-footer > span { overflow-wrap: anywhere; }
+.live-guide {
+  margin: 16px 0 24px;
+  border-block: 1px solid var(--border);
+  padding: 16px 0;
+}
+.live-guide summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  line-height: 1.6;
+}
+.live-guide .instructions {
+  max-width: 900px;
+}
+.live-guide p {
+  color: var(--secondary);
+  line-height: 1.7;
+}
+.live-guide code {
+  overflow-wrap: anywhere;
+}
+.live-guide button {
+  margin: 8px 0;
+}
+.page-footer > span {
+  overflow-wrap: anywhere;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1762,4 +1782,201 @@ dialog::backdrop {
     animation: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Extended desktop curriculum: chapter navigation, reading and applied work. */
+.course-filters {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.course-filters label {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 220px;
+  font-weight: 600;
+}
+.course-filters select,
+.course-filters input,
+.reflection-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.course-chapter {
+  padding-top: 22px;
+  margin-bottom: 28px;
+  border-top: 1px solid var(--border);
+}
+.course-chapter .section-title h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.chapter-nav {
+  margin-bottom: 10px;
+}
+.chapter-nav summary {
+  cursor: pointer;
+  padding: 10px 0;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 650;
+}
+.chapter-nav summary:hover {
+  color: var(--accent);
+}
+.chapter-nav button {
+  width: 100%;
+}
+.course-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  color: var(--secondary);
+}
+.course-breadcrumb > .secondary-button {
+  margin-left: auto;
+}
+.prerequisite-note {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  font-size: 13px;
+  color: var(--secondary);
+}
+.lesson-reading {
+  max-width: 82ch;
+  margin: 28px 0;
+  line-height: 1.9;
+}
+.lesson-reading h3 {
+  font-size: 18px;
+}
+.lesson-reading pre,
+.lab-manual pre {
+  padding: 16px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.lesson-challenge {
+  border-top: 1px solid var(--border);
+  margin-top: 28px;
+  padding-top: 24px;
+}
+.lesson-challenge li {
+  margin-bottom: 10px;
+}
+.reflection-field {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0 8px;
+  font-weight: 600;
+}
+.reflection-field textarea {
+  resize: vertical;
+  line-height: 1.8;
+  font-weight: 400;
+}
+.acceptance-list {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 16px 0;
+  padding: 16px;
+}
+.acceptance-list legend {
+  padding: 0 8px;
+  font-weight: 600;
+}
+.acceptance-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.acceptance-list input {
+  margin-top: 5px;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+.lab-manual {
+  line-height: 1.85;
+}
+.lab-manual h3 {
+  margin: 28px 0 14px;
+  font-size: 18px;
+}
+.lab-manual h4 {
+  margin: 20px 0 12px;
+}
+.manual-table {
+  overflow-x: auto;
+}
+.manual-table td,
+.manual-table th {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+@media (max-width: 640px) {
+  .course-breadcrumb {
+    gap: 8px;
+  }
+  .course-breadcrumb > span {
+    width: 100%;
+  }
+  .course-breadcrumb > .secondary-button {
+    margin-left: 0;
+  }
+  .course-chapter .section-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+.lab-manual a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Long manuals use desktop reading width and a direct section jump. */
+dialog.manual-dialog {
+  width: min(1040px, calc(100vw - 32px));
+}
+.manual-jump {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+}
+.manual-jump select {
+  padding: 10px;
+  min-width: 0;
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.lab-manual h3,
+.lab-manual h4 {
+  scroll-margin-top: 80px;
 }

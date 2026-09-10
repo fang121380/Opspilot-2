@@ -2,19 +2,33 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { lessons } from "../src/curriculum";
 
-test("successful review preserves completion across refresh", async ({ page }) => {
+test("successful review preserves completion across refresh", async ({
+  page,
+}) => {
   const lesson = lessons[0];
   await page.goto("/#learn/00/0");
   await page.getByRole("button", { name: "理解了，开始练习" }).click();
   for (const item of lesson.commands) {
-    await page.getByRole("button", { name: `模拟运行：${item.command}`, exact: true }).click();
+    await page
+      .getByRole("button", { name: `模拟运行：${item.command}`, exact: true })
+      .click();
   }
   await page.getByRole("button", { name: "检查本课记录" }).click();
-  await page.getByRole("radio", { name: lesson.quiz.options[lesson.quiz.correct], exact: true }).check();
+  await page
+    .getByRole("radio", {
+      name: lesson.quiz.options[lesson.quiz.correct],
+      exact: true,
+    })
+    .check();
   await page.getByRole("button", { name: "检查答案" }).click();
   await page.getByRole("button", { name: "完成本课", exact: true }).click();
   await page.goto("/#learn/00/1");
-  await page.getByRole("button", { name: `模拟运行：${lesson.commands[0].command}`, exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: `模拟运行：${lesson.commands[0].command}`,
+      exact: true,
+    })
+    .click();
   await page.goto("/");
   await page.reload();
   await expect(page.getByRole("progressbar")).toHaveAttribute("value", "1");
@@ -22,7 +36,9 @@ test("successful review preserves completion across refresh", async ({ page }) =
 
 test("home resumes the last lesson step after reload", async ({ page }) => {
   await page.goto("/#learn/02/1");
-  await page.getByRole("textbox", { name: "输入本课模拟命令" }).fill("kubctl get nodes");
+  await page
+    .getByRole("textbox", { name: "输入本课模拟命令" })
+    .fill("kubctl get nodes");
   await page.getByRole("button", { name: "运行输入的模拟命令" }).click();
   await page.goto("/");
   await page.reload();
@@ -35,16 +51,28 @@ test("home resumes the last lesson step after reload", async ({ page }) => {
   await expect(page).toHaveURL(/#learn\/02\/2$/);
 });
 
-test("live guide never certifies empty or failed snapshots", async ({ page }) => {
-  await page.route("**/lab-api/**", (route) => route.fulfill({
-    json: { ok: true, output: JSON.stringify({ items: [] }) },
-  }));
+test("live guide never certifies empty or failed snapshots", async ({
+  page,
+}) => {
+  await page.route("**/lab-api/**", (route) =>
+    route.fulfill({
+      json: { ok: true, output: JSON.stringify({ items: [] }) },
+    }),
+  );
   await page.goto("/#cluster");
   await page.locator(".live-guide summary").click();
-  await expect(page.getByText("尚未读取实机数据。", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("尚未读取实机数据。", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "读取练习环境", exact: true }).click();
-  await expect(page.getByText("当前快照还未满足就绪条件。查看需关注的资源，再结合事件定位原因。")).toBeVisible();
-  await expect(page.getByText("本次快照：节点与示例应用就绪。", { exact: false })).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "当前快照还未满足就绪条件。查看需关注的资源，再结合事件定位原因。",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("本次快照：节点与示例应用就绪。", { exact: false }),
+  ).toHaveCount(0);
 });
 
 test("beginner landing and explicit simulation survive narrow Android screens", async ({
@@ -130,10 +158,11 @@ test("glossary dialog supports keyboard close and returns focus", async ({
   await expect(opener).toBeFocused();
 });
 
-test("all five lessons require their own command evidence and preserve completed work", async ({
+test("all lessons require their own command evidence and preserve completed work", async ({
   page,
 }) => {
   await page.goto("/");
+  test.setTimeout(180_000);
   for (const lesson of lessons) {
     await page.goto(`/#learn/${lesson.id}/0`);
     await page.getByRole("button", { name: "理解了，开始练习" }).click();
@@ -154,13 +183,26 @@ test("all five lessons require their own command evidence and preserve completed
       })
       .check();
     await page.getByRole("button", { name: "检查答案" }).click();
+    if (lesson.challenge) {
+      await expect(
+        page.getByRole("button", { name: "完成本课", exact: true }),
+      ).toBeDisabled();
+      await page
+        .getByRole("textbox", { name: "我的分析与证据" })
+        .fill("我已根据本课样例逐项关联现象与证据，实机仍需单独验证。");
+      for (const item of lesson.challenge.acceptance)
+        await page.getByRole("checkbox", { name: item, exact: true }).check();
+    }
     await page.getByRole("button", { name: "完成本课", exact: true }).click();
   }
   await expect(
     page.getByRole("heading", { name: "故障案例", exact: true }),
   ).toBeVisible();
   await page.goto("/");
-  await expect(page.getByRole("progressbar")).toHaveAttribute("value", "5");
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "value",
+    String(lessons.length),
+  );
 });
 
 test("partial refresh retains live provenance and last known logs", async ({
@@ -323,4 +365,98 @@ test("storage failure preserves a usable learning session", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "理解了，开始练习" }).click();
   await expect(page.getByText("教学模拟终端", { exact: true })).toBeVisible();
+});
+
+test("desktop chapter filters, prerequisites and saved applied work form a usable learning chain", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  await page
+    .getByRole("combobox", { name: "按章节学习" })
+    .selectOption("docker");
+  await expect(page.locator(".course-chapter")).toHaveCount(1);
+  await page.getByRole("searchbox", { name: "查找课程" }).fill("不存在的课程");
+  await expect(
+    page.getByRole("button", { name: "显示全部课程" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "显示全部课程" }).click();
+  await expect(page.locator(".course-chapter")).toHaveCount(5);
+  await page.goto("/#learn/docker-build/0");
+  await page.locator(".prerequisite-note button").click();
+  await expect(page).toHaveURL(/#learn\/docker-lifecycle\/0$/);
+  await page.getByRole("button", { name: "本章实机手册" }).click();
+  await expect(page.getByRole("dialog")).toContainText("opspilot-lab-web:1");
+  await page
+    .getByRole("combobox", { name: "跳到手册章节" })
+    .selectOption({
+      label: "进阶实机实验：Compose、服务 DNS 与真正的后端请求",
+    });
+  await expect(
+    page.getByRole("heading", {
+      name: "进阶实机实验：Compose、服务 DNS 与真正的后端请求",
+    }),
+  ).toBeInViewport();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "本章实机手册" }),
+  ).toBeFocused();
+  await page.goto("/#learn/docker-build/2");
+  const note =
+    "缓存失效要对照输入变化，构建完成之后仍需要核对运行实例的镜像身份。";
+  await page.getByRole("textbox", { name: "我的分析与证据" }).fill(note);
+  await page.getByRole("checkbox").first().check();
+  await page.reload();
+  await expect(
+    page.getByRole("textbox", { name: "我的分析与证据" }),
+  ).toHaveValue(note);
+  await expect(page.getByRole("checkbox").first()).toBeChecked();
+  await page.goto("/#learn/k8s-config/2");
+  await expect(
+    page.getByRole("textbox", { name: "我的分析与证据" }),
+  ).toHaveValue("");
+});
+
+test("expanded desktop reading, tasks and manuals remain accessible in both themes", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  for (const route of ["/", "/#learn/docker-build/0", "/#learn/k8s-probes/2"]) {
+    await page.goto(route);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
+  }
+  await page.goto("/#learn/docker-build/0");
+  await page.screenshot({
+    path: testInfo.outputPath("desktop-course.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "切换深色模式", exact: true }).click();
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await page.getByRole("button", { name: "本章实机手册" }).click();
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath("desktop-manual.png") });
 });

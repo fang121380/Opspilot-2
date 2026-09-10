@@ -8,9 +8,12 @@ import {
   RotateCcw,
   Terminal,
 } from "lucide-react";
-import type { Lesson } from "../curriculum";
+import { lessons, modules, type Lesson } from "../curriculum";
+import { LessonChallenge } from "./LessonChallenge";
+import { LabGuide } from "./LabGuide";
 import {
   canCompleteLesson,
+  challengeComplete,
   recordLessonCommand,
   verifyLesson,
   type LessonProgress,
@@ -26,6 +29,9 @@ type Props = {
   onUpdate: (patch: Partial<LessonProgress>) => void;
   onComplete: () => void;
   onGlossary: () => void;
+  allProgress: Record<string, LessonProgress>;
+  onLesson: (id: string) => void;
+  onCatalog: () => void;
 };
 
 export function LessonView({
@@ -37,7 +43,11 @@ export function LessonView({
   onUpdate,
   onComplete,
   onGlossary,
+  allProgress,
+  onLesson,
+  onCatalog,
 }: Props) {
+  const [showLab, setShowLab] = useState(false);
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState("");
   const [answer, setAnswer] = useState<number | null>(null);
@@ -91,17 +101,35 @@ export function LessonView({
       );
   };
   const selectedAnswer = progress.quiz ? lesson.quiz.correct : answer;
-  const completedCommandCount = lesson.commands.filter((item) =>
-    progress.records.some(
-      (record) => record.command === normalizeCommand(item.command) && record.ok,
-    ),
+  const completedCommandCount = lesson.commands.filter(
+    (item) =>
+      progress.records
+        .filter(
+          (record) =>
+            normalizeCommand(record.command) === normalizeCommand(item.command),
+        )
+        .at(-1)?.ok,
   ).length;
   return (
     <>
+      <div className="course-breadcrumb">
+        <button className="text-button" onClick={onCatalog}>
+          <ArrowLeft />
+          全部课程
+        </button>
+        <span>
+          {modules.find((module) => module.id === lesson.module)?.title}
+        </span>
+        {lesson.module !== "foundation" && (
+          <button className="secondary-button" onClick={() => setShowLab(true)}>
+            本章实机手册
+          </button>
+        )}
+      </div>
       <div className="page-heading">
         <div>
           <p className="metadata">
-            课程 {index + 1} / 5 · {lesson.duration}
+            课程 {index + 1} / {lessons.length} · {lesson.duration}
           </p>
           <h1>{lesson.title}</h1>
           <p>{lesson.outcome}</p>
@@ -113,8 +141,25 @@ export function LessonView({
       </div>
       <div className="mode-note">
         <span className="badge sample">模拟练习</span>
-        <span>本课输出为教学样例，不代表你的电脑或集群状态。</span>
+        <span>
+          本课输出为固定教学快照，不代表你的电脑或集群状态。部分字段与名称已简化，不能直接当部署清单；各课场景互相独立。
+        </span>
       </div>
+      {!!lesson.prerequisites?.length && (
+        <div className="prerequisite-note">
+          <span>先修知识（建议先学，可直接预习）：</span>
+          {lesson.prerequisites.map((id) => (
+            <button
+              className="text-button"
+              key={id}
+              onClick={() => onLesson(id)}
+            >
+              {lessons.find((item) => item.id === id)?.title}
+              {allProgress[id]?.completed ? " · 已完成" : " · 待学习"}
+            </button>
+          ))}
+        </div>
+      )}
       <nav className="lesson-steps" aria-label="本课步骤">
         {["理解概念", "练习命令", "判断证据"].map((label, position) => (
           <button
@@ -139,6 +184,19 @@ export function LessonView({
         <section className="lesson-content" aria-label="理解概念">
           <h2>先建立这个概念</h2>
           <p className="reading-copy">{lesson.why}</p>
+          {lesson.sections?.map((section, position) => (
+            <section className="lesson-reading" key={section.title}>
+              <h3>
+                {position + 1}. {section.title}
+              </h3>
+              <p>{section.body}</p>
+              {section.example && (
+                <pre tabIndex={0} aria-label={`${section.title}示例`}>
+                  {section.example}
+                </pre>
+              )}
+            </section>
+          ))}
           <dl className="concept-list">
             {lesson.concepts.map((concept) => (
               <div key={concept.term}>
@@ -150,6 +208,20 @@ export function LessonView({
               </div>
             ))}
           </dl>
+          {!!lesson.references?.length && (
+            <details className="reading-note">
+              <summary>进一步阅读：本课官方资料</summary>
+              <ul>
+                {lesson.references.map((reference) => (
+                  <li key={reference.url}>
+                    <a href={reference.url} target="_blank" rel="noreferrer">
+                      {reference.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           <details className="reading-note">
             <summary>容易混淆的地方</summary>
             <ul>
@@ -189,11 +261,13 @@ export function LessonView({
             {lesson.commands.map((item, position) => (
               <div className="command-item" key={item.command}>
                 <span className="command-number">
-                  {progress.records.some(
-                    (record) =>
-                      record.command === normalizeCommand(item.command) &&
-                      record.ok,
-                  ) ? (
+                  {progress.records
+                    .filter(
+                      (record) =>
+                        normalizeCommand(record.command) ===
+                        normalizeCommand(item.command),
+                    )
+                    .at(-1)?.ok ? (
                     <Check />
                   ) : (
                     position + 1
@@ -346,6 +420,16 @@ export function LessonView({
               请回到练习命令，检查本课模拟记录。
             </p>
           )}
+          <LessonChallenge
+            lesson={lesson}
+            progress={progress}
+            onUpdate={onUpdate}
+          />
+          {!challengeComplete(lesson, progress) && (
+            <p className="inline-feedback">
+              请写下任务分析并逐项核对自评，然后完成本课。
+            </p>
+          )}
           <div className="step-footer">
             <button className="text-button" onClick={() => onStep(1)}>
               <RotateCcw />
@@ -361,6 +445,9 @@ export function LessonView({
             </button>
           </div>
         </section>
+      )}
+      {showLab && lesson.module && (
+        <LabGuide module={lesson.module} onClose={() => setShowLab(false)} />
       )}
     </>
   );

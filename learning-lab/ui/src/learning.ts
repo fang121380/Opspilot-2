@@ -13,18 +13,27 @@ export type LessonProgress = {
   quiz: boolean;
   completed: boolean;
   lastStep?: number;
+  reflection?: string;
+  acceptance?: number[];
 };
 
 export const emptyProgress: LessonProgress = {
   curriculumVersion: CURRENT_CURRICULUM_VERSION,
-  concept: false, commands: [], records: [], verified: false, quiz: false, completed: false,
+  concept: false,
+  commands: [],
+  records: [],
+  verified: false,
+  quiz: false,
+  completed: false,
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function parseProgress(raw: string | null): Record<string, LessonProgress> {
+export function parseProgress(
+  raw: string | null,
+): Record<string, LessonProgress> {
   let saved: unknown;
   try {
     saved = JSON.parse(raw ?? "{}");
@@ -38,44 +47,94 @@ export function parseProgress(raw: string | null): Record<string, LessonProgress
     const entry = saved[lesson.id];
     if (!isObject(entry)) continue;
     const allowed = new Set(lesson.commands.map(({ command }) => command));
-    const legacyCommands = new Map(lesson.commands.map(({ command }) => [command.replace(" --context kind-k8s-lab", ""), command]));
+    const legacyCommands = new Map(
+      lesson.commands.map(({ command }) => [
+        command.replace(" --context kind-k8s-lab", ""),
+        command,
+      ]),
+    );
     const commands = Array.isArray(entry.commands)
-      ? entry.commands.filter((command): command is string => typeof command === "string")
-        .map(normalizeCommand).map((command) => legacyCommands.get(command) ?? command)
-        .filter((command) => allowed.has(command))
+      ? entry.commands
+          .filter((command): command is string => typeof command === "string")
+          .map(normalizeCommand)
+          .map((command) => legacyCommands.get(command) ?? command)
+          .filter((command) => allowed.has(command))
       : [];
     const records: CommandRecord[] = [];
     if (Array.isArray(entry.records)) {
       for (const record of entry.records) {
-        if (!isObject(record) || typeof record.command !== "string" || typeof record.output !== "string" || typeof record.ok !== "boolean") continue;
+        if (
+          !isObject(record) ||
+          typeof record.command !== "string" ||
+          typeof record.output !== "string" ||
+          typeof record.ok !== "boolean"
+        )
+          continue;
         const command = normalizeCommand(record.command);
-        if (allowed.has(command)) records.push({ command, output: record.output, ok: record.ok });
+        if (allowed.has(command))
+          records.push({ command, output: record.output, ok: record.ok });
       }
     }
     const latest = new Map(records.map((record) => [record.command, record]));
-    const successfulCommands = records.filter((record) => latest.get(record.command)?.ok).map((record) => record.command);
+    const successfulCommands = records
+      .filter((record) => latest.get(record.command)?.ok)
+      .map((record) => record.command);
     const progress: LessonProgress = {
       curriculumVersion: CURRENT_CURRICULUM_VERSION,
       concept: entry.concept === true,
-      commands: [...new Set([...commands, ...successfulCommands])].filter((command) => latest.get(command)?.ok !== false),
+      commands: [...new Set([...commands, ...successfulCommands])].filter(
+        (command) => latest.get(command)?.ok !== false,
+      ),
       records,
       verified: false,
-      quiz: entry.curriculumVersion === CURRENT_CURRICULUM_VERSION && entry.quiz === true,
+      quiz:
+        entry.curriculumVersion === CURRENT_CURRICULUM_VERSION &&
+        entry.quiz === true,
       completed: false,
     };
-    if (typeof entry.lastStep === "number" && Number.isInteger(entry.lastStep) && entry.lastStep >= 0 && entry.lastStep <= 2) {
+    if (
+      typeof entry.lastStep === "number" &&
+      Number.isInteger(entry.lastStep) &&
+      entry.lastStep >= 0 &&
+      entry.lastStep <= 2
+    ) {
       progress.lastStep = entry.lastStep;
     }
-    progress.verified = entry.verified === true && verifyLesson(lesson, progress).passed;
-    progress.completed = entry.completed === true && canCompleteLesson(lesson, progress);
+    if (lesson.challenge) {
+      progress.reflection =
+        typeof entry.reflection === "string"
+          ? entry.reflection.slice(0, 8000)
+          : "";
+      progress.acceptance = Array.isArray(entry.acceptance)
+        ? [
+            ...new Set(
+              entry.acceptance.filter(
+                (item): item is number =>
+                  typeof item === "number" &&
+                  Number.isInteger(item) &&
+                  item >= 0 &&
+                  item < lesson.challenge!.acceptance.length,
+              ),
+            ),
+          ]
+        : [];
+    }
+    progress.verified =
+      entry.verified === true && verifyLesson(lesson, progress).passed;
+    progress.completed =
+      entry.completed === true && canCompleteLesson(lesson, progress);
     restored[lesson.id] = progress;
   }
   return restored;
 }
 
-export function verifyLesson(lesson: Lesson, progress: LessonProgress): { passed: boolean; missingCommands: string[]; missingEvidence: string[] } {
+export function verifyLesson(
+  lesson: Lesson,
+  progress: LessonProgress,
+): { passed: boolean; missingCommands: string[]; missingEvidence: string[] } {
   const latest = new Map<string, CommandRecord>();
-  for (const record of progress.records) latest.set(normalizeCommand(record.command), record);
+  for (const record of progress.records)
+    latest.set(normalizeCommand(record.command), record);
   const missingCommands = lesson.commands
     .filter(({ command }) => latest.get(command)?.ok !== true)
     .map(({ command }) => command);
@@ -87,30 +146,73 @@ export function verifyLesson(lesson: Lesson, progress: LessonProgress): { passed
       ? !record.output.includes(evidence)
       : !record.output.split(/\s+/).includes(evidence);
   });
-  return { passed: missingCommands.length === 0 && missingEvidence.length === 0, missingCommands, missingEvidence };
+  return {
+    passed: missingCommands.length === 0 && missingEvidence.length === 0,
+    missingCommands,
+    missingEvidence,
+  };
 }
 
-export function canCompleteLesson(lesson: Lesson, progress: LessonProgress): boolean {
-  return progress.concept && progress.quiz && progress.verified && verifyLesson(lesson, progress).passed;
+export function canCompleteLesson(
+  lesson: Lesson,
+  progress: LessonProgress,
+): boolean {
+  return (
+    progress.concept &&
+    progress.quiz &&
+    progress.verified &&
+    verifyLesson(lesson, progress).passed &&
+    challengeComplete(lesson, progress)
+  );
 }
 
-export function recordLessonCommand(lesson: Lesson, progress: LessonProgress, attempt: CommandRecord): LessonProgress {
+export function challengeComplete(
+  lesson: Lesson,
+  progress: LessonProgress,
+): boolean {
+  return (
+    !lesson.challenge ||
+    (Boolean(progress.reflection?.trim()) &&
+      lesson.challenge.acceptance.every((_, index) =>
+        progress.acceptance?.includes(index),
+      ))
+  );
+}
+
+export function recordLessonCommand(
+  lesson: Lesson,
+  progress: LessonProgress,
+  attempt: CommandRecord,
+): LessonProgress {
   const command = normalizeCommand(attempt.command);
-  if (!lesson.commands.some((item) => normalizeCommand(item.command) === command)) return progress;
+  if (
+    !lesson.commands.some((item) => normalizeCommand(item.command) === command)
+  )
+    return progress;
 
   const records = [
-    ...progress.records.filter((record) => normalizeCommand(record.command) !== command),
+    ...progress.records.filter(
+      (record) => normalizeCommand(record.command) !== command,
+    ),
     { ...attempt, command },
   ];
   const next: LessonProgress = {
     ...progress,
     records,
-    commands: records.filter((record) => record.ok).map((record) => record.command),
+    commands: records
+      .filter((record) => record.ok)
+      .map((record) => record.command),
     verified: false,
     completed: false,
   };
   // Repeating a valid exercise retains earned credit; new work still needs explicit verification.
-  next.verified = progress.verified && verifyLesson(lesson, progress).passed && verifyLesson(lesson, next).passed;
-  next.completed = progress.completed && canCompleteLesson(lesson, progress) && canCompleteLesson(lesson, next);
+  next.verified =
+    progress.verified &&
+    verifyLesson(lesson, progress).passed &&
+    verifyLesson(lesson, next).passed;
+  next.completed =
+    progress.completed &&
+    canCompleteLesson(lesson, progress) &&
+    canCompleteLesson(lesson, next);
   return next;
 }

@@ -12,9 +12,29 @@ A React browser workbench for Docker, Kind, Kubernetes, and evidence-based troub
 | 学习集群 / Live cluster | 固定目标的只读资源、节点、事件、日志 / Read-only resources, nodes, events, logs | Python >=3.12, kubectl, Docker, Kind, `k8s-lab` |
 | 真实事故 / Live incidents | 可选的 Opspilot 事故列表 / Optional Opspilot incident list | 单独启动主 API 及其依赖 / Main API and its dependencies |
 
-课程按“理解概念 → 练习命令 → 判断证据”分为三步，五课均可直接进入。完成课程需要概念阅读、本课命令记录自检和证据小测通过。页面会保存上次学习的课程与步骤；已完成课程可复习，重新运行正确的模拟命令不会取消完成成绩。模拟版本输出不能证明本机安装成功，模拟完成也不等于实机验收。
+课程按“理解概念 → 练习命令 → 判断证据”分为三步，26 课按学习准备、Docker、Kind、Kubernetes、综合排障分章组织，均可直接进入。首页可按章节筛选和搜索，每课有先修链接。完成课程需要概念阅读、本课命令记录自检和证据小测通过；新增深入课程还要求填写分析笔记并逐项完成任务自评。页面会保存上次学习的课程与步骤；已完成课程可复习，重新运行正确的模拟命令不会取消完成成绩。模拟版本输出不能证明本机安装成功，模拟完成也不等于实机验收。
 
-Each lesson has three navigable steps: understand concepts, practice commands, and judge evidence. All five lessons are available. Completion requires reading, verification of that lesson's command records, and its evidence quiz. Simulated versions do not prove local installation; simulated completion is separate from real lab acceptance.
+Each lesson has three navigable steps: understand concepts, practice commands, and judge evidence. All 26 lessons are available in five ordered chapters with prerequisite links, chapter filters, and search. Completion requires reading, verification of that lesson's command records, and its evidence quiz. The 21 extended lessons also require a written reflection and an acceptance checklist; these are self-assessment, not automatic grading. Simulated versions do not prove local installation; simulated completion is separate from real lab acceptance.
+
+## 完整学习链 / Learning Path
+
+| 阶段 | 课数 | 学习内容与交付 |
+| --- | --- | --- |
+| 学习准备 | 1 | 客户端、引擎与集群连通的边界 |
+| Docker | 7 | 生命周期、Dockerfile 与缓存、镜像身份、网络、数据卷、Compose、综合验收 |
+| Kind | 5 | 架构与节点、集群配置、镜像交付、生命周期和重建边界 |
+| Kubernetes | 9 | 声明式对象、发布、Service/DNS、配置、存储、探针、调度资源、权限 |
+| 综合排障 | 4 | 状态/事件/日志、启动失败、网络断点、审批与恢复验证 |
+
+每课按“原理 → 具体场景 → 模拟证据 → 判断 → 应用任务”推进。原来 `00`–`04` 的有效成绩继续保留，新课使用独立 ID。笔记和任务自评跟随浏览器进度保存，旧课完成不会自动获得新课成绩。
+
+Each chapter connects concepts, scenarios, simulated evidence, judgment, and applied tasks. Original `00`–`04` lesson credit is preserved; new lessons use independent IDs. Notes and self-assessment remain browser-local.
+
+电脑端课程顶部的 **本章实机手册** 可直接阅读四份完整实验，不必离开工作台。它们将同一个小网站从 Docker 镜像逐步部署到 Kind/Kubernetes，再验证故障恢复；Compose、多服务网络、PVC 数据保留及最小权限有独立专题。实机命令由学习者在系统终端手工执行，网页不代执行；成功样例和自评不代表真实集群验收。
+
+The desktop course view embeds four hands-on manuals covering a connected Docker → Kind → Kubernetes → troubleshooting project, with Compose, persistent storage and RBAC exercises. Commands run only when learners explicitly execute them in their system terminal.
+
+详细课表、学习顺序与验收见 [课程地图](CURRICULUM.md)。本路径聚焦独立交付与诊断一个容器应用；生产级高可用、服务网格、完整 Helm/GitOps、集群升级与认证备考并未宣称全部覆盖。
 
 ## 启动网页 / Start the Website
 
@@ -136,6 +156,10 @@ For optional live incidents, prepare the dependencies and database in the [repos
 | [02 Kind 集群 / Kind](labs/02-kind-cluster.md) | 固定 context、Ready 节点 / Explicit context, Ready nodes |
 | [03 Kubernetes 应用 / Application](labs/03-kubernetes-app.md) | 副本就绪、Service 与实际请求 / Ready replicas, Service, real request |
 | [04 故障排查 / Troubleshooting](labs/04-troubleshooting.md) | 就绪探针证据与恢复验证 / Readiness evidence and recovery |
+| [05 Docker 综合项目](labs/05-docker-project.md) | 构建网站、数据卷、Compose 与网络 |
+| [06 Kind 综合项目](labs/06-kind-project.md) | 复用集群、加载本地镜像、验证节点 |
+| [07 Kubernetes 综合项目](labs/07-kubernetes-project.md) | 发布、配置、探针、PVC 数据保留、RBAC |
+| [08 排障综合项目](labs/08-troubleshooting-project.md) | 手工注入、证据记录、恢复与复验 |
 
 ## 前端检查 / Frontend Checks
 
@@ -152,3 +176,17 @@ npm run test:e2e
 构建后 `npm run preview` 默认使用 [本机 4173](http://127.0.0.1:4173)；`npm run preview:lan` 使用 LAN 5173。开发和预览均有相同只读代理。静态文件服务器不会自动提供这些代理；实机页面需要代理和本地服务。测试命令是复现步骤，验证结果以本次实际运行记录为准。
 
 After building, `npm run preview` uses [loopback port 4173](http://127.0.0.1:4173); `npm run preview:lan` uses LAN port 5173. Development and preview share read-only proxies. A plain static file server does not provide these proxies. Test commands describe how to reproduce checks, not a claim that every platform or integration has passed.
+
+使用已安装 Chrome 运行浏览器回归（默认仍使用 Playwright Chromium）：
+
+```bash
+# macOS/Linux，独立测试端口避免占用正在学习的工作台
+WORKBENCH_BROWSER_CHANNEL=chrome WORKBENCH_E2E_PORT=5186 npm run test:e2e
+```
+
+```powershell
+# Windows PowerShell，在 learning-lab/ui 中
+$env:WORKBENCH_BROWSER_CHANNEL = "chrome"
+$env:WORKBENCH_E2E_PORT = "5186"
+npm run test:e2e
+```

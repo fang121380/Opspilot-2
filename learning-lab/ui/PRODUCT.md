@@ -8,13 +8,13 @@ Help beginners interpret Docker, Kind, and Kubernetes output and distinguish sym
 
 ## 学习闭环 / Learning Flow
 
-五课 ID 保持 `00` 到 `04`，所有课程均可访问。每课三步为理解概念、练习命令、判断证据。模拟器只返回列出的固定示例，不启动进程；`docker run` 也只是模拟。命令输出标明 example，不能证明真实工具安装或集群连通。
+26 课按五章排列，原有五课 ID `00` 到 `04` 保留；21 节深入课采用独立语义 ID。目录支持分章、搜索及先修导航，所有课程均可访问。每课三步为理解概念、练习命令、判断证据。模拟器只返回列出的固定示例，不启动进程；`docker run` 也只是模拟。命令输出标明 example，不能证明真实工具安装或集群连通。
 
-Five lesson IDs remain `00` through `04`, all accessible. Each lesson has concepts, commands, and evidence steps. The simulator returns only listed fixed examples and starts no processes, including for `docker run`. Example output cannot prove real installation or connectivity.
+The expanded path has 26 lessons in five chapters. Original IDs `00` through `04` remain, alongside 21 stable semantic IDs. All lessons are accessible with chapter filters, search, and prerequisite navigation. Each lesson has concepts, commands, and evidence steps. The simulator returns only listed fixed examples and starts no processes, including for `docker run`. Example output cannot prove real installation or connectivity.
 
-每课保存独立的 `{command, output, ok}` 记录。自检要求当前课程全部命令的最新成功记录，并将每条证据绑定到对应命令；全局历史、其他课程、失败结果不能通过。完成需要概念阅读、记录验证、当前小测通过。重新运行课程命令会清除该课自检和完成状态，要求重新验证。
+每课保存独立的 `{command, output, ok}` 记录。自检要求当前课程全部命令的最新成功记录，并将每条证据绑定到对应命令；全局历史、其他课程、失败结果不能通过。完成需要概念阅读、记录验证、当前小测通过；深入课程还要求非空分析笔记及全部任务自评。任务自评是学习者声明，不是自动判分或实机证明。成功复习保留已获得成绩；失败或证据错误会使自检和完成状态失效。修改笔记后若不再满足验收条件，完成状态失效。
 
-Each lesson owns `{command, output, ok}` records. Verification requires the latest successful attempts of all its commands and binds each evidence marker to its corresponding command. Global history, other lessons, and failed attempts do not qualify. Completion requires reading, verification, and the current quiz. Rerunning a course command clears its verification and completion until checked again.
+Each lesson owns `{command, output, ok}` records. Verification requires the latest successful attempts of all its commands and binds each evidence marker to its corresponding command. Global history, other lessons, and failed attempts do not qualify. Completion requires reading, verification and the current quiz; extended lessons also require a nonempty reflection and all self-assessment items. Self-assessment is not automatic grading or live verification. Successful review retains credit; failed evidence or removal of required reflection/checklist items invalidates completion.
 
 存储键继续使用 `opspilot-learning-progress-v3`，每课记录新增 `curriculumVersion: 4`。加载时检查 JSON、字段类型、已知课程与命令；旧记录的有效阅读和命令历史可保留，但没有输出证据的自检/完成无效，非当前版本的小测通过状态会清除。localStorage 不可用时显示提示并维持当前会话操作。
 
@@ -23,6 +23,12 @@ The storage key remains `opspilot-learning-progress-v3`; lesson records now incl
 进度按浏览器和 URL 来源保存；从 localhost 改用电脑 LAN 地址、切换端口或更换设备不会共享进度。重置会清除当前来源的课程进度。故障案例是独立的可重练会话，不保存为课程完成记录。
 
 Progress belongs to one browser and URL origin; localhost, a LAN address, another port, and another device do not share it. Reset clears course progress for the current origin. The case is an independent repeatable session, not persisted course completion.
+
+## 实机手册 / Hands-on Manuals
+
+四份本地 Markdown 实验通过构建导入，在课程弹窗中阅读；渲染器只支持这些手册使用的 Markdown 子集，不执行 HTML、不请求远端内容。Docker → Kind → Kubernetes → 排障共享 `opspilot-lab-web:1` 与独立 `study-web`，并提供 Compose、PVC、RBAC 实机专题。必须由学习者在系统终端手工操作，不将实机修改加入网页命令白名单。
+
+Four bundled Markdown manuals are rendered locally using a limited Markdown subset, without raw HTML execution or remote fetches. They connect a single project and include Compose, PVC and RBAC exercises. All live mutations require manual system-terminal execution by the learner.
 
 ## 故障案例 / Troubleshooting Case
 
@@ -38,6 +44,6 @@ The bridge queries only `kind-k8s-lab`. Four channels track refresh, successful 
 
 ## 验收范围 / Acceptance Scope
 
-需验证完整五课与案例、旧版和损坏存储、单通道失败保留快照、键盘弹窗、窄屏布局、开发与预览代理，以及实机只读集成。前端命令见 [README](../README.md)。自动化浏览器视口测试不等于真实 Android 或 Mac 设备测试；最终报告应列明实际运行结果和未覆盖设备。
+需验证完整 26 课与案例、先修链、分章筛选、笔记隔离和恢复、旧版和损坏存储、单通道失败保留快照、键盘弹窗、窄屏布局、开发与预览代理，以及实机只读集成。前端命令见 [README](../README.md)。自动化浏览器视口测试不等于真实 Android 或 Mac 设备测试；最终报告应列明实际运行结果和未覆盖设备。
 
 Validate all lessons and the case, old/malformed storage, partial refresh failure, keyboard dialogs, narrow layouts, dev/preview proxies, and live read-only integration. Commands are in the [README](../README.md). Browser viewport automation is not physical Android or Mac testing; final reports must identify actual results and untested devices.
