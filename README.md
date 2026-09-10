@@ -85,7 +85,7 @@ The learning UI supports desktop and Android browsers with evidence-based lesson
 
 ## 当前验证
 
-2026-09-10 桌面学习链扩展：前端 38 项逻辑测试、15 项 Chrome 浏览器测试与构建通过。详见[本次验证记录](docs/workbench-validation-2026-09-10.md)。以下是此前主项目验证基线，不代表本轮重新执行了后端或实机演练。
+2026-09-10 全量自动化复验：后端 173 passed / 34 PowerShell 相关 skipped，覆盖率 91.05%；Ruff、评测 4/4、演示、前端 38 项逻辑测试、15 项 Chrome 浏览器测试、构建及本机独立 Docker Compose 运行验证均通过。当前实现的 Windows 更新器和其余 GitHub CI 均通过。详见[全量验证记录与边界](docs/full-validation-2026-09-10.md)。以下保留此前的主项目与实机演练基线。
 
 ```text
 182 个 Python 单元/集成测试通过（Windows，2026-09-05）
