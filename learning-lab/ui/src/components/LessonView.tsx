@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  Bookmark,
   Check,
   CircleHelp,
   Play,
@@ -134,10 +135,20 @@ export function LessonView({
           <h1>{lesson.title}</h1>
           <p>{lesson.outcome}</p>
         </div>
-        <button className="secondary-button" onClick={onGlossary}>
-          <CircleHelp />
-          查术语
-        </button>
+        <div className="lesson-heading-actions">
+          <button
+            className="secondary-button"
+            aria-pressed={progress.reviewNeeded ?? false}
+            onClick={() => onUpdate({ reviewNeeded: !progress.reviewNeeded })}
+          >
+            <Bookmark />
+            {progress.reviewNeeded ? "已加入待复习" : "稍后复习"}
+          </button>
+          <button className="secondary-button" onClick={onGlossary}>
+            <CircleHelp />
+            查术语
+          </button>
+        </div>
       </div>
       <div className="mode-note">
         <span className="badge sample">模拟练习</span>
@@ -447,7 +458,10 @@ export function LessonView({
         </section>
       )}
       {showLab && lesson.module && (
-        <LabGuide module={lesson.module} onClose={() => setShowLab(false)} />
+        <LabGuide
+          guideId={lesson.labGuide ?? lesson.module}
+          onClose={() => setShowLab(false)}
+        />
       )}
     </>
   );

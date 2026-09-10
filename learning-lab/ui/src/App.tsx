@@ -113,6 +113,9 @@ export function App() {
     return () => removeEventListener("hashchange", update);
   }, []);
   useEffect(() => {
+    document.getElementById("main-content")?.focus({ preventScroll: true });
+  }, [route.view, route.lesson, route.step]);
+  useEffect(() => {
     try {
       localStorage.setItem(progressKey, JSON.stringify(progress));
       setStorageError(false);

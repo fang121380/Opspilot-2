@@ -8,9 +8,9 @@ Help beginners interpret Docker, Kind, and Kubernetes output and distinguish sym
 
 ## 学习闭环 / Learning Flow
 
-26 课按五章排列，原有五课 ID `00` 到 `04` 保留；21 节深入课采用独立语义 ID。目录支持分章、搜索及先修导航，所有课程均可访问。每课三步为理解概念、练习命令、判断证据。模拟器只返回列出的固定示例，不启动进程；`docker run` 也只是模拟。命令输出标明 example，不能证明真实工具安装或集群连通。
+30 课按五章排列：学习准备 1 课、Docker 9 课、Kind 5 课、Kubernetes 11 课、排障 4 课。原有五课 ID `00` 到 `04` 保留；25 节深入课采用独立语义 ID。目录支持分章、学习状态筛选、正文/术语/命令搜索及先修导航，所有课程均可访问。每课三步为理解概念、练习命令、判断证据。模拟器只返回列出的固定示例，不启动进程；`docker run` 也只是模拟。命令输出标明 example，不能证明真实工具安装或集群连通。
 
-The expanded path has 26 lessons in five chapters. Original IDs `00` through `04` remain, alongside 21 stable semantic IDs. All lessons are accessible with chapter filters, search, and prerequisite navigation. Each lesson has concepts, commands, and evidence steps. The simulator returns only listed fixed examples and starts no processes, including for `docker run`. Example output cannot prove real installation or connectivity.
+The expanded path has 30 lessons in five chapters: preparation 1, Docker 9, Kind 5, Kubernetes 11, and troubleshooting 4. Original IDs `00` through `04` remain, alongside 25 stable semantic IDs. All lessons are accessible with chapter/status filters, explanation/terminology/command search, and prerequisite navigation. Each lesson has concepts, commands, and evidence steps. The simulator returns only listed fixed examples and starts no processes, including for `docker run`. Example output cannot prove real installation or connectivity.
 
 每课保存独立的 `{command, output, ok}` 记录。自检要求当前课程全部命令的最新成功记录，并将每条证据绑定到对应命令；全局历史、其他课程、失败结果不能通过。完成需要概念阅读、记录验证、当前小测通过；深入课程还要求非空分析笔记及全部任务自评。任务自评是学习者声明，不是自动判分或实机证明。成功复习保留已获得成绩；失败或证据错误会使自检和完成状态失效。修改笔记后若不再满足验收条件，完成状态失效。
 
@@ -24,11 +24,25 @@ The storage key remains `opspilot-learning-progress-v3`; lesson records now incl
 
 Progress belongs to one browser and URL origin; localhost, a LAN address, another port, and another device do not share it. Reset clears course progress for the current origin. The case is an independent repeatable session, not persisted course completion.
 
+## 复习与笔记导出 / Review and Notes Export
+
+首页按未开始、学习中、已完成、待复习筛选，允许组合章节和搜索条件。课程的待复习标记独立保存，不修改完成成绩；由学习者手工添加或取消，不自动推断遗忘程度。搜索覆盖标题、学习缘由、正文和示例代码、概念说明、命令、常见误区及任务说明与参考思路；结果展示匹配片段，不搜索个人笔记或远程内容。
+
+Overview status filters combine with chapter and text search. Review flags are manually controlled and independent of completion. Search covers titles, rationale, explanations and code examples, concepts, commands, common mistakes, and applied tasks with reference solutions. Results show matching excerpts; search does not include personal notes or remote content.
+
+Markdown 导出包含有分析笔记的课程，保留笔记原文、学习状态、待复习标记及任务自评。下载由当前浏览器生成，不上传服务器；文件供阅读和备份笔记，不能导入、恢复完整进度或跨设备同步。没有笔记时导出按钮禁用。
+
+Markdown export includes lessons with reflections, preserving their text, status, review flag, and self-assessment. The browser creates the download locally. It is a readable notes backup, without import, full-progress restore, or device synchronization. Export is disabled when no notes exist.
+
 ## 实机手册 / Hands-on Manuals
 
-四份本地 Markdown 实验通过构建导入，在课程弹窗中阅读；渲染器只支持这些手册使用的 Markdown 子集，不执行 HTML、不请求远端内容。Docker → Kind → Kubernetes → 排障共享 `opspilot-lab-web:1` 与独立 `study-web`，并提供 Compose、PVC、RBAC 实机专题。必须由学习者在系统终端手工操作，不将实机修改加入网页命令白名单。
+六份本地 Markdown 实验在打开对应手册时按需加载，在课程弹窗中阅读；加载期间显示提示，失败时说明错误并可刷新工作台重试。渲染器只支持这些手册使用的 Markdown 子集，不执行 HTML、不请求外部文档内容。Docker → Kind → Kubernetes → 排障共享 `opspilot-lab-web:1` 与独立 `study-web`，并提供 Compose、PVC、RBAC 实机专题；另有两份镜像交付和工作负载模式手册，前者使用专用容器，后者使用 `learning` 命名空间内的专用资源名称。必须由学习者在系统终端手工操作，不将实机修改加入网页命令白名单。
 
-Four bundled Markdown manuals are rendered locally using a limited Markdown subset, without raw HTML execution or remote fetches. They connect a single project and include Compose, PVC and RBAC exercises. All live mutations require manual system-terminal execution by the learner.
+Six bundled Markdown manuals load on demand when opened, with loading feedback and an error state that allows retrying after refreshing the workbench. They use a limited Markdown subset without raw HTML execution or external-document fetches. Four connect a single project with Compose, PVC and RBAC exercises; two additional manuals isolate image delivery and workload patterns. All live mutations require manual system-terminal execution by the learner.
+
+新增手册的真实实验尚未执行，Go 源码编译与 YAML 解析不代表容器或集群验收。后续专题顺序为 Ingress 入口、HPA 指标、NetworkPolicy、Helm/GitOps；不宣称已覆盖这些专题。
+
+The new manuals have not been executed against Docker or Kubernetes. Go compilation and YAML parsing validate source material only. Planned topics progress through Ingress, HPA metrics, NetworkPolicy, and Helm/GitOps.
 
 ## 故障案例 / Troubleshooting Case
 
@@ -44,6 +58,6 @@ The bridge queries only `kind-k8s-lab`. Four channels track refresh, successful 
 
 ## 验收范围 / Acceptance Scope
 
-需验证完整 26 课与案例、先修链、分章筛选、笔记隔离和恢复、旧版和损坏存储、单通道失败保留快照、键盘弹窗、窄屏布局、开发与预览代理，以及实机只读集成。前端命令见 [README](../README.md)。自动化浏览器视口测试不等于真实 Android 或 Mac 设备测试；最终报告应列明实际运行结果和未覆盖设备。
+需验证完整 30 课与案例、先修链、分章与学习状态筛选、正文搜索、待复习持久化、Markdown 笔记导出、笔记隔离和恢复、旧版和损坏存储、单通道失败保留快照、键盘弹窗、窄屏布局、开发与预览代理，以及实机只读集成。前端命令见 [README](../README.md)，本轮实际结果见[学习改进记录](../../docs/learning-improvements-2026-09-10.md)。自动化浏览器视口测试不等于真实 Android 或 Mac 设备测试；最终报告应列明实际运行结果和未覆盖设备。
 
 Validate all lessons and the case, old/malformed storage, partial refresh failure, keyboard dialogs, narrow layouts, dev/preview proxies, and live read-only integration. Commands are in the [README](../README.md). Browser viewport automation is not physical Android or Mac testing; final reports must identify actual results and untested devices.

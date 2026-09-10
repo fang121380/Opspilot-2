@@ -12,27 +12,29 @@ A React browser workbench for Docker, Kind, Kubernetes, and evidence-based troub
 | 学习集群 / Live cluster | 固定目标的只读资源、节点、事件、日志 / Read-only resources, nodes, events, logs | Python >=3.12, kubectl, Docker, Kind, `k8s-lab` |
 | 真实事故 / Live incidents | 可选的 Opspilot 事故列表 / Optional Opspilot incident list | 单独启动主 API 及其依赖 / Main API and its dependencies |
 
-课程按“理解概念 → 练习命令 → 判断证据”分为三步，26 课按学习准备、Docker、Kind、Kubernetes、综合排障分章组织，均可直接进入。首页可按章节筛选和搜索，每课有先修链接。完成课程需要概念阅读、本课命令记录自检和证据小测通过；新增深入课程还要求填写分析笔记并逐项完成任务自评。页面会保存上次学习的课程与步骤；已完成课程可复习，重新运行正确的模拟命令不会取消完成成绩。模拟版本输出不能证明本机安装成功，模拟完成也不等于实机验收。
+课程按“理解概念 → 练习命令 → 判断证据”分为三步，30 课按学习准备、Docker、Kind、Kubernetes、综合排障分章组织，均可直接进入。首页可按章节与学习状态筛选，搜索标题、正文、术语及命令，每课有先修链接。完成课程需要概念阅读、本课命令记录自检和证据小测通过；25 节深入课程还要求填写分析笔记并逐项完成任务自评。页面会保存上次学习的课程与步骤；已完成课程可复习，重新运行正确的模拟命令不会取消完成成绩。模拟版本输出不能证明本机安装成功，模拟完成也不等于实机验收。
 
-Each lesson has three navigable steps: understand concepts, practice commands, and judge evidence. All 26 lessons are available in five ordered chapters with prerequisite links, chapter filters, and search. Completion requires reading, verification of that lesson's command records, and its evidence quiz. The 21 extended lessons also require a written reflection and an acceptance checklist; these are self-assessment, not automatic grading. Simulated versions do not prove local installation; simulated completion is separate from real lab acceptance.
+Each lesson has three navigable steps: understand concepts, practice commands, and judge evidence. All 30 lessons are available in five ordered chapters with prerequisite links, chapter/status filters, and search across titles, explanations, terminology, and commands. Completion requires reading, verification of that lesson's command records, and its evidence quiz. The 25 extended lessons also require a written reflection and an acceptance checklist; these are self-assessment, not automatic grading. Simulated versions do not prove local installation; simulated completion is separate from real lab acceptance.
 
 ## 完整学习链 / Learning Path
 
 | 阶段 | 课数 | 学习内容与交付 |
 | --- | --- | --- |
 | 学习准备 | 1 | 客户端、引擎与集群连通的边界 |
-| Docker | 7 | 生命周期、Dockerfile 与缓存、镜像身份、网络、数据卷、Compose、综合验收 |
+| Docker | 9 | 生命周期、Dockerfile 与缓存、多阶段构建、仓库与摘要交付、网络、数据卷、Compose、综合验收 |
 | Kind | 5 | 架构与节点、集群配置、镜像交付、生命周期和重建边界 |
-| Kubernetes | 9 | 声明式对象、发布、Service/DNS、配置、存储、探针、调度资源、权限 |
+| Kubernetes | 11 | 声明式对象、发布、Job/CronJob、Service/DNS、配置、存储、StatefulSet、探针、调度资源、权限 |
 | 综合排障 | 4 | 状态/事件/日志、启动失败、网络断点、审批与恢复验证 |
 
 每课按“原理 → 具体场景 → 模拟证据 → 判断 → 应用任务”推进。原来 `00`–`04` 的有效成绩继续保留，新课使用独立 ID。笔记和任务自评跟随浏览器进度保存，旧课完成不会自动获得新课成绩。
 
 Each chapter connects concepts, scenarios, simulated evidence, judgment, and applied tasks. Original `00`–`04` lesson credit is preserved; new lessons use independent IDs. Notes and self-assessment remain browser-local.
 
-电脑端课程顶部的 **本章实机手册** 可直接阅读四份完整实验，不必离开工作台。它们将同一个小网站从 Docker 镜像逐步部署到 Kind/Kubernetes，再验证故障恢复；Compose、多服务网络、PVC 数据保留及最小权限有独立专题。实机命令由学习者在系统终端手工执行，网页不代执行；成功样例和自评不代表真实集群验收。
+电脑端课程顶部的 **本章实机手册** 可直接阅读六份完整实验，不必离开工作台。原有四份将同一个小网站从 Docker 镜像逐步部署到 Kind/Kubernetes，再验证故障恢复，包含 Compose、多服务网络、PVC 与最小权限；新增两份独立实验涵盖多阶段镜像与本机仓库交付，以及批处理和工作负载选择。实机命令由学习者在系统终端手工执行，网页不代执行；成功样例和自评不代表真实集群验收。
 
-The desktop course view embeds four hands-on manuals covering a connected Docker → Kind → Kubernetes → troubleshooting project, with Compose, persistent storage and RBAC exercises. Commands run only when learners explicitly execute them in their system terminal.
+The desktop course view embeds six hands-on manuals: four connected Docker → Kind → Kubernetes → troubleshooting projects, plus isolated image-delivery and workload-pattern experiments. Commands run only when learners explicitly execute them in their system terminal.
+
+新增两份手册尚未执行真实 Docker/Kubernetes 实验，Go 源码编译和 YAML 解析仅是材料检查；本轮验证见[学习改进记录](../docs/learning-improvements-2026-09-10.md)。后续按 Ingress 入口 → HPA 指标 → NetworkPolicy → Helm/GitOps 的依赖顺序深化。
 
 详细课表、学习顺序与验收见 [课程地图](CURRICULUM.md)。本路径聚焦独立交付与诊断一个容器应用；生产级高可用、服务网格、完整 Helm/GitOps、集群升级与认证备考并未宣称全部覆盖。
 
@@ -133,6 +135,10 @@ The bridge fixes the context to `kind-k8s-lab` and workload namespace to `learni
 
 进度保存在当前浏览器、当前来源的 localStorage；电脑 localhost、LAN 地址和手机是不同存储空间。旧 `v3` 记录迁移保留有效阅读和命令历史，但无证据的完成状态和旧题目的小测通过状态会重置。新记录含课程版本、上次学习步骤及每课命令输出；存储不可用时只能保留当前会话进度。
 
+可以在课程顶部标记或取消 **稍后复习**，首页显示待复习数量，并按“未开始、学习中、已完成、待复习”筛选。待复习标记与完成成绩独立，不会清除已获得成绩。**导出学习笔记** 生成 Markdown，包含有笔记课程的分析文字、学习状态与任务自评，供个人阅读和备份；它不是完整进度存档，不能导入或跨设备同步。
+
+Mark lessons for later review independently of completion. The overview filters unstarted, in-progress, completed, and review lessons. Markdown export includes written reflections, learning status, and self-assessment for lessons with notes. It is a readable notes backup, not an importable or synchronized progress archive.
+
 错误输入课程命令时，终端会说明可能的拼写、学习集群或命名空间范围，并给出可核对的命令；建议不会自动运行。包含删除、写入、管道、重定向、多行输入或其他 Shell 结构的命令全部不会执行。
 
 真实练习从“学习集群”页面的“第一次做实机练习”展开说明开始：先准备 Docker 和 `k8s-lab`，再读取节点与 `hello-web` 的快照，最后对照资源、事件和日志。页面显示“本次快照就绪”只代表已读取的节点和示例工作负载状态；业务访问验证仍需按页面指引在系统终端单独执行。
@@ -160,6 +166,8 @@ For optional live incidents, prepare the dependencies and database in the [repos
 | [06 Kind 综合项目](labs/06-kind-project.md) | 复用集群、加载本地镜像、验证节点 |
 | [07 Kubernetes 综合项目](labs/07-kubernetes-project.md) | 发布、配置、探针、PVC 数据保留、RBAC |
 | [08 排障综合项目](labs/08-troubleshooting-project.md) | 手工注入、证据记录、恢复与复验 |
+| [09 镜像交付实验](labs/09-image-delivery.md) | 多阶段非 root 服务、缓存、本机临时仓库、摘要与版本验收 |
+| [10 工作负载模式](labs/10-workload-patterns.md) | Job/CronJob、StatefulSet 的稳定身份与存储验收 |
 
 ## 前端检查 / Frontend Checks
 

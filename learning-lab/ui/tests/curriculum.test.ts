@@ -31,7 +31,7 @@ test("learning chain has unique IDs, ordered prerequisites and substantive chapt
     assert.ok(lesson.challenge?.solution, lesson.id);
     assert.ok(
       lesson.references?.every((ref) =>
-        /^https:\/\/(docs\.docker\.com|kind\.sigs\.k8s\.io|kubernetes\.io)\//.test(
+        /^https:\/\/(docs\.docker\.com|distribution\.github\.io|kind\.sigs\.k8s\.io|kubernetes\.io)\//.test(
           ref.url,
         ),
       ),
@@ -39,9 +39,9 @@ test("learning chain has unique IDs, ordered prerequisites and substantive chapt
     );
   }
   for (const [module, minimum] of [
-    ["docker", 7],
+    ["docker", 9],
     ["kind", 5],
-    ["kubernetes", 9],
+    ["kubernetes", 11],
     ["troubleshooting", 4],
   ] as const) {
     assert.ok(

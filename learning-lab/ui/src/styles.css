@@ -1980,3 +1980,26 @@ dialog.manual-dialog {
 .lab-manual h4 {
   scroll-margin-top: 80px;
 }
+
+.study-actions,
+.lesson-heading-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.study-actions {
+  margin: 18px 0 24px;
+}
+.lesson-heading-actions {
+  justify-content: flex-end;
+}
+.lesson-heading-actions [aria-pressed="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.course-list button .course-study-state {
+  color: var(--accent);
+  margin-top: 4px;
+}

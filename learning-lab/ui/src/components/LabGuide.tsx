@@ -1,17 +1,32 @@
-import { Fragment, type ReactNode } from "react";
-import type { ModuleId } from "../curriculum";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { resolveManualHref } from "../study-tools";
+import type { LabGuideId } from "../curriculum";
 import { Modal } from "./Modal";
-import dockerGuide from "../../../labs/05-docker-project.md?raw";
-import kindGuide from "../../../labs/06-kind-project.md?raw";
-import kubernetesGuide from "../../../labs/07-kubernetes-project.md?raw";
-import troubleshootingGuide from "../../../labs/08-troubleshooting-project.md?raw";
-
 const guides = {
-  foundation: { title: "实机练习准备", text: dockerGuide },
-  docker: { title: "Docker 实机综合实验", text: dockerGuide },
-  kind: { title: "Kind 实机综合实验", text: kindGuide },
-  kubernetes: { title: "Kubernetes 实机综合实验", text: kubernetesGuide },
-  troubleshooting: { title: "排障实机综合实验", text: troubleshootingGuide },
+  docker: {
+    title: "Docker 实机综合实验",
+    load: () => import("../manuals/05-docker-project"),
+  },
+  "image-delivery": {
+    title: "镜像构建与分发专题",
+    load: () => import("../manuals/09-image-delivery"),
+  },
+  kind: {
+    title: "Kind 实机综合实验",
+    load: () => import("../manuals/06-kind-project"),
+  },
+  kubernetes: {
+    title: "Kubernetes 实机综合实验",
+    load: () => import("../manuals/07-kubernetes-project"),
+  },
+  "workload-patterns": {
+    title: "批处理与有状态应用专题",
+    load: () => import("../manuals/10-workload-patterns"),
+  },
+  troubleshooting: {
+    title: "排障实机综合实验",
+    load: () => import("../manuals/08-troubleshooting-project"),
+  },
 };
 
 // Render the small Markdown subset used by the bundled manuals as React nodes.
@@ -26,9 +41,8 @@ function inline(text: string): ReactNode[] {
         return <strong key={index}>{part.slice(2, -2)}</strong>;
       const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
       if (link) {
-        const href = link[2].startsWith("https://")
-          ? link[2]
-          : `https://github.com/fang121380/Opspilot-2/blob/main/learning-lab/labs/${link[2]}`;
+        const href = resolveManualHref(link[2]);
+        if (!href) return <Fragment key={index}>{link[1]}</Fragment>;
         return (
           <a key={index} href={href} target="_blank" rel="noreferrer">
             {link[1]}
@@ -152,20 +166,73 @@ function Manual({ text }: { text: string }) {
 }
 
 export function LabGuide({
-  module,
+  guideId,
   onClose,
 }: {
-  module: ModuleId;
+  guideId: LabGuideId;
   onClose: () => void;
 }) {
-  const guide = guides[module];
+  const [selectedGuide, setSelectedGuide] = useState<LabGuideId>(
+    guideId === "foundation" ? "docker" : guideId,
+  );
+  const guide =
+    guides[selectedGuide === "foundation" ? "docker" : selectedGuide];
+  const [content, setContent] = useState<{
+    guide: typeof guide;
+    text?: string;
+    failed?: boolean;
+  }>();
+  useEffect(() => {
+    let active = true;
+    setContent(undefined);
+    guide.load().then(
+      (module) => {
+        if (active) setContent({ guide, text: module.default });
+      },
+      () => {
+        if (active) setContent({ guide, failed: true });
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [guide]);
   return (
     <Modal title={guide.title} onClose={onClose} wide>
       <div className="mode-note">
         <span className="badge sample">手工实机实验</span>
         <span>仅供阅读。在系统终端执行才会改变本机；网页不会代你执行。</span>
       </div>
-      <Manual text={guide.text} />
+      <label className="manual-jump">
+        选择实机手册
+        <select
+          value={selectedGuide}
+          onChange={(event) =>
+            setSelectedGuide(event.target.value as LabGuideId)
+          }
+        >
+          {Object.entries(guides).map(([id, item]) => (
+            <option key={id} value={id}>
+              {item.title}
+            </option>
+          ))}
+        </select>
+      </label>
+      {content?.guide === guide && content.text !== undefined ? (
+        <Manual key={selectedGuide} text={content.text} />
+      ) : content?.guide === guide && content.failed ? (
+        <div role="alert">
+          <p>手册加载失败。请检查工作台连接，刷新页面后重新打开手册。</p>
+          <button
+            className="secondary-button"
+            onClick={() => window.location.reload()}
+          >
+            刷新工作台
+          </button>
+        </div>
+      ) : (
+        <p role="status">正在加载实机手册…</p>
+      )}
     </Modal>
   );
 }

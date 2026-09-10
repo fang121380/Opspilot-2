@@ -1,3 +1,5 @@
+import { dockerDeliveryLessons } from "./courses/docker-delivery.ts";
+import { workloadLessons } from "./courses/workload-patterns.ts";
 import { dockerLessons, kindLessons } from "./courses/docker-kind.ts";
 import {
   kubernetesLessons,
@@ -25,7 +27,10 @@ export type LessonQuiz = {
   explanation: string;
 };
 
+export type LabGuideId = ModuleId | "image-delivery" | "workload-patterns";
+
 export type Lesson = {
+  labGuide?: LabGuideId;
   module?: ModuleId;
   prerequisites?: string[];
   sections?: { title: string; body: string; example?: string }[];
@@ -490,7 +495,17 @@ export const modules: {
 export const lessons: Lesson[] = [
   { ...introductoryLessons[0], module: "foundation", prerequisites: [] },
   { ...introductoryLessons[1], module: "docker", prerequisites: ["00"] },
-  ...dockerLessons,
+  ...dockerLessons.flatMap((lesson): Lesson[] => [
+    lesson.id === "docker-network"
+      ? { ...lesson, prerequisites: ["docker-registry"] }
+      : lesson,
+    ...(lesson.id === "docker-build"
+      ? dockerDeliveryLessons.map((item) => ({
+          ...item,
+          labGuide: "image-delivery" as const,
+        }))
+      : []),
+  ]),
   {
     ...introductoryLessons[2],
     module: "kind",
@@ -502,7 +517,12 @@ export const lessons: Lesson[] = [
     module: "kubernetes",
     prerequisites: ["kind-lifecycle"],
   },
-  ...kubernetesLessons,
+  ...kubernetesLessons.flatMap((lesson): Lesson[] => [
+    lesson,
+    ...workloadLessons
+      .filter((item) => item.prerequisites?.[0] === lesson.id)
+      .map((item) => ({ ...item, labGuide: "workload-patterns" as const })),
+  ]),
   {
     ...introductoryLessons[4],
     module: "troubleshooting",

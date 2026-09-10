@@ -387,11 +387,9 @@ test("desktop chapter filters, prerequisites and saved applied work form a usabl
   await expect(page).toHaveURL(/#learn\/docker-lifecycle\/0$/);
   await page.getByRole("button", { name: "本章实机手册" }).click();
   await expect(page.getByRole("dialog")).toContainText("opspilot-lab-web:1");
-  await page
-    .getByRole("combobox", { name: "跳到手册章节" })
-    .selectOption({
-      label: "进阶实机实验：Compose、服务 DNS 与真正的后端请求",
-    });
+  await page.getByRole("combobox", { name: "跳到手册章节" }).selectOption({
+    label: "进阶实机实验：Compose、服务 DNS 与真正的后端请求",
+  });
   await expect(
     page.getByRole("heading", {
       name: "进阶实机实验：Compose、服务 DNS 与真正的后端请求",
@@ -451,6 +449,7 @@ test("expanded desktop reading, tasks and manuals remain accessible in both them
     ).violations,
   ).toEqual([]);
   await page.getByRole("button", { name: "本章实机手册" }).click();
+  await expect(page.locator(".lab-manual")).toBeVisible();
   expect(
     (
       await new AxeBuilder({ page })
@@ -458,5 +457,135 @@ test("expanded desktop reading, tasks and manuals remain accessible in both them
         .analyze()
     ).violations,
   ).toEqual([]);
+  await expect(page.locator(".lab-manual")).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("desktop-manual.png") });
+});
+
+test("review queue and Markdown export retain unfinished learning and literal notes", async ({
+  page,
+}) => {
+  const { readFile } = await import("node:fs/promises");
+  await page.goto("/#learn/docker-build/2");
+  const note = "这是我的缓存分析。\n```\n用户自己的代码片段\n```";
+  await page.getByRole("textbox", { name: "我的分析与证据" }).fill(note);
+  await page.getByRole("button", { name: "稍后复习", exact: true }).click();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "已加入待复习", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.goto("/");
+  await expect(page.locator(".continue-section .primary-button")).toHaveText(
+    "继续学习",
+  );
+  await expect(page.getByRole("progressbar")).toHaveAttribute("value", "0");
+  await page.getByRole("combobox", { name: "学习状态" }).selectOption("review");
+  await expect(page.locator(".course-list button")).toHaveCount(1);
+  await expect(page.locator(".course-list")).toContainText(
+    "从源码构建可复现镜像",
+  );
+  const downloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "导出全部笔记（1）", exact: true })
+    .click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(
+    /^opspilot-learning-notes-.*\.md$/,
+  );
+  const exported = await readFile((await download.path())!, "utf8");
+  expect(exported).toContain(note);
+  expect(exported).toContain("待复习");
+  expect(exported).toContain("````text");
+  await page.locator(".course-list button").click();
+  await expect(
+    page.getByRole("textbox", { name: "我的分析与证据" }),
+  ).toHaveValue(note);
+  await page.getByRole("button", { name: "已加入待复习", exact: true }).click();
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "学习状态" }).selectOption("review");
+  await expect(
+    page.getByText("还没有待复习课程。", { exact: false }),
+  ).toBeVisible();
+});
+
+test("manual HTTP links stay local and chapter changes keep keyboard focus usable", async ({
+  page,
+}) => {
+  await page.goto("/#learn/00/0");
+  await page.getByRole("button", { name: "理解了，开始练习" }).click();
+  await expect(page.locator("#main-content")).toBeFocused();
+  await page.goto("/#learn/docker-build/0");
+  await page.getByRole("button", { name: "本章实机手册" }).click();
+  await expect(
+    page.getByRole("dialog").locator('a[href="http://127.0.0.1:8090/"]'),
+  ).toHaveCount(1);
+  await page
+    .getByRole("combobox", { name: "选择实机手册" })
+    .selectOption("workload-patterns");
+  await expect(page.getByRole("dialog")).toContainText("StatefulSet");
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "本章实机手册" }),
+  ).toBeFocused();
+  await page.goto("/#learn/k8s-stateful/2");
+  const input = page.getByRole("textbox", { name: "我的分析与证据" });
+  await input.fill("稳定身份与数据保留需要分别验证。");
+  await expect(input).toBeFocused();
+});
+
+test("deep content search and empty notebook states are explicit", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "导出全部笔记（0）", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("searchbox", { name: "查找课程" }).fill("COPY 缓存");
+  await expect(page.locator(".course-list")).toContainText(
+    "从源码构建可复现镜像",
+  );
+  await page
+    .getByRole("combobox", { name: "学习状态" })
+    .selectOption("completed");
+  await expect(
+    page.getByRole("button", { name: "显示全部课程" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "显示全部课程" }).click();
+  await expect(page.getByRole("combobox", { name: "学习状态" })).toHaveValue(
+    "all",
+  );
+});
+
+test("manuals load on demand, report network failure and recover after refresh", async ({
+  page,
+}) => {
+  let requests = 0;
+  await page.route(/manuals\/05-docker-project/, async (route) => {
+    requests++;
+    await route.abort("failed");
+  });
+  await page.goto("/#learn/docker-build/0");
+  expect(requests).toBe(0);
+  await page.getByRole("button", { name: "本章实机手册" }).click();
+  await expect(page.getByRole("alert")).toContainText("手册加载失败");
+  expect(requests).toBeGreaterThan(0);
+  await page.getByLabel("选择实机手册").selectOption("kind");
+  await expect(page.locator(".lab-manual")).toBeVisible();
+  await page.getByLabel("选择实机手册").selectOption("docker");
+  await expect(page.getByRole("alert")).toBeVisible();
+  await page.unroute(/manuals\/05-docker-project/);
+  await page.getByRole("button", { name: "刷新工作台" }).click();
+  await page.getByRole("button", { name: "本章实机手册" }).click();
+  for (const id of [
+    "docker",
+    "image-delivery",
+    "kind",
+    "kubernetes",
+    "workload-patterns",
+    "troubleshooting",
+  ]) {
+    await page.getByLabel("选择实机手册").selectOption(id);
+    await expect(page.locator(".lab-manual")).toBeVisible();
+    await expect(page.locator(".lab-manual pre").first()).toBeVisible();
+    await expect(page.getByRole("alert")).toHaveCount(0);
+  }
 });

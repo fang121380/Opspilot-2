@@ -3,6 +3,7 @@ import {
   BookOpen,
   Box,
   Check,
+  Download,
   Layers3,
   Server,
   Terminal,
@@ -10,6 +11,15 @@ import {
 import { useState } from "react";
 import { lessons, modules } from "../curriculum";
 import type { LessonProgress } from "../learning";
+import {
+  exportStudyNotes,
+  matchesStudy,
+  noteCount,
+  searchExcerpt,
+  statusLabels,
+  studyStatus,
+  type StudyFilter,
+} from "../study-tools";
 
 export function Overview({
   progress,
@@ -26,18 +36,47 @@ export function Overview({
 }) {
   const [search, setSearch] = useState("");
   const [chapter, setChapter] = useState("all");
+  const [filter, setFilter] = useState<StudyFilter>("all");
+  const [exportMessage, setExportMessage] = useState("");
+  const notes = noteCount(progress);
+  const reviewCount = lessons.filter(
+    (lesson) => progress[lesson.id]?.reviewNeeded,
+  ).length;
+  const exportNotes = () => {
+    let url: string | undefined;
+    let link: HTMLAnchorElement | undefined;
+    try {
+      const blob = new Blob([exportStudyNotes(progress)], {
+        type: "text/markdown;charset=utf-8",
+      });
+      url = URL.createObjectURL(blob);
+      link = document.createElement("a");
+      link.href = url;
+      link.download = `opspilot-learning-notes-${new Date().toISOString().slice(0, 10)}.md`;
+      document.body.appendChild(link);
+      link.click();
+      setExportMessage(
+        `已请求下载 ${notes} 课笔记，请在浏览器下载记录中查看。`,
+      );
+    } catch {
+      setExportMessage("浏览器未能创建下载，请重试；原有笔记仍保留在页面中。");
+    } finally {
+      link?.remove();
+      if (url) setTimeout(() => URL.revokeObjectURL(url!), 1000);
+    }
+  };
   const matches = lessons.filter(
     (lesson) =>
       (chapter === "all" || lesson.module === chapter) &&
-      `${lesson.title} ${lesson.subtitle} ${lesson.outcome}`
-        .toLowerCase()
-        .includes(search.trim().toLowerCase()),
+      matchesStudy(lesson, progress[lesson.id], search, filter),
   );
   const count = lessons.filter(
     (lesson) => progress[lesson.id]?.completed,
   ).length;
   const next =
     lessons.find((lesson) => lesson.id === nextLessonId) ?? lessons[0];
+  const hasStarted =
+    count > 0 || studyStatus(progress[next.id]) !== "unstarted";
   return (
     <>
       <div className="page-heading">
@@ -52,8 +91,8 @@ export function Overview({
           <div className="section-title">
             <h2>
               {count === lessons.length
-                ? "课程练习已完成，继续实机验收"
-                : count
+                ? "课程练习已完成，继续巩固"
+                : hasStarted
                   ? "继续你的学习"
                   : "从认识三个工具开始"}
             </h2>
@@ -85,12 +124,40 @@ export function Overview({
         <button className="primary-button" onClick={() => onLesson(next.id)}>
           {count === lessons.length
             ? "复习课程"
-            : count
+            : hasStarted
               ? "继续学习"
               : "开始第一课"}
           <ArrowRight />
         </button>
       </section>
+      <div className="study-actions">
+        <button
+          className="secondary-button"
+          onClick={() => {
+            setFilter("review");
+            setChapter("all");
+            setSearch("");
+          }}
+        >
+          待复习 · {reviewCount} 课
+        </button>
+        <button
+          className="secondary-button"
+          disabled={!notes}
+          onClick={exportNotes}
+        >
+          <Download />
+          导出全部笔记（{notes}）
+        </button>
+        <span className="metadata">
+          导出为 Markdown 文件，仅保存到本机；不上传或同步进度。
+        </span>
+      </div>
+      {exportMessage && (
+        <p className="inline-feedback" role="status">
+          {exportMessage}
+        </p>
+      )}
       <section className="overview-path" aria-label="工具之间的关系">
         {[
           { icon: Box, name: "Docker", detail: "运行容器" },
@@ -128,10 +195,23 @@ export function Overview({
             </select>
           </label>
           <label>
+            学习状态
+            <select
+              value={filter}
+              onChange={(event) => setFilter(event.target.value as StudyFilter)}
+            >
+              <option value="all">全部状态</option>
+              <option value="unstarted">未开始</option>
+              <option value="started">学习中</option>
+              <option value="completed">已完成</option>
+              <option value="review">待复习</option>
+            </select>
+          </label>
+          <label>
             查找课程
             <input
               type="search"
-              placeholder="如：网络、存储、探针…"
+              placeholder="搜索标题、正文、术语或命令…"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -182,7 +262,11 @@ export function Overview({
                     </span>
                     <span>
                       <strong>{lesson.title}</strong>
-                      <small>{lesson.subtitle}</small>
+                      <small>{searchExcerpt(lesson, search)}</small>
+                      <small className="course-study-state">
+                        {statusLabels[studyStatus(progress[lesson.id])]}
+                        {progress[lesson.id]?.reviewNeeded ? " · 待复习" : ""}
+                      </small>
                     </span>
                     <span className="course-duration">{lesson.duration}</span>
                     <ArrowRight />
@@ -194,12 +278,17 @@ export function Overview({
         })}
         {!matches.length && (
           <div className="reading-note" role="status">
-            <p>没有匹配的课程。试试“网络”或清除筛选。</p>
+            <p>
+              {filter === "review" && !reviewCount
+                ? "还没有待复习课程。在课程标题旁点击“稍后复习”，就能在这里找到。"
+                : "没有匹配的课程。试试其他关键词或清除筛选。"}
+            </p>
             <button
               className="secondary-button"
               onClick={() => {
                 setSearch("");
                 setChapter("all");
+                setFilter("all");
               }}
             >
               显示全部课程

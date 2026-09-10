@@ -50,7 +50,9 @@ Follow the Docker -> Kind -> Kubernetes -> troubleshooting path in [`learning-la
 
 Windows 部署见 [`learning-lab/windows/README.md`](learning-lab/windows/README.md)，执行 `Install-All.ps1` 可一键安装所需工具。
 
-学习界面提供五章 26 课的完整应用学习链，覆盖 Docker 构建/网络/存储/Compose、Kind、Kubernetes 发布/配置/存储/探针/权限及综合排障，详见[课程地图](learning-lab/CURRICULUM.md)。电脑端提供章节导航、课程搜索、先修链接、分析笔记和四份内置实机手册。
+学习界面提供五章 30 课的应用学习链：学习准备 1 课、Docker 9 课、Kind 5 课、Kubernetes 11 课、综合排障 4 课，其中 25 节深入课包含分析任务与自评。新增多阶段构建、镜像仓库交付、Job/CronJob 及 StatefulSet 专题，详见[课程地图](learning-lab/CURRICULUM.md)。电脑端提供章节与学习状态筛选、正文/术语/命令搜索、待复习标记、先修链接，以及六份内置实机手册。
+
+分析笔记可导出为 Markdown，保留文字、学习状态和任务自评，供阅读和备份；不支持导入或跨设备同步。新增手册的实机步骤尚未执行，Go 源码编译与 YAML 解析仅覆盖材料检查；本轮实际验证范围见[学习改进记录](docs/learning-improvements-2026-09-10.md)。后续按 Ingress 入口 → HPA 指标 → NetworkPolicy → Helm/GitOps 深化。
 
 学习界面支持电脑和安卓浏览器：课程采用“理解概念 → 练习命令 → 判断证据”，课程与故障案例明确使用模拟数据；实机区域通过同源只读代理显示独立的更新时间和错误状态。手机与电脑在同一 Wi-Fi 时，可使用 `npm run dev:lan` 或 Windows 启动脚本的 `-Lan` 选项。手机端为响应式网页，进度保存在当前浏览器，不包含 APK、离线运行或跨设备同步。详见 [学习工作台](learning-lab/README.md)。
 

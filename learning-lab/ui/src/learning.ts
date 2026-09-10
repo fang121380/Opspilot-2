@@ -15,6 +15,7 @@ export type LessonProgress = {
   lastStep?: number;
   reflection?: string;
   acceptance?: number[];
+  reviewNeeded?: boolean;
 };
 
 export const emptyProgress: LessonProgress = {
@@ -100,6 +101,8 @@ export function parseProgress(
     ) {
       progress.lastStep = entry.lastStep;
     }
+    if (typeof entry.reviewNeeded === "boolean")
+      progress.reviewNeeded = entry.reviewNeeded;
     if (lesson.challenge) {
       progress.reflection =
         typeof entry.reflection === "string"

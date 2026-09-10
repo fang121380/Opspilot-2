@@ -10,15 +10,19 @@ The interface prioritizes reading, command output, and evidence interpretation. 
 
 | 视图 / View | 内容 / Content |
 | --- | --- |
-| 学习首页 / Overview | 继续学习、五章 26 课目录、章节筛选与搜索 / Resume, 26 lessons by chapter, filters and search |
+| 学习首页 / Overview | 继续学习、五章 30 课目录、章节/状态筛选、正文搜索、待复习、笔记导出 / Resume, 30 lessons, chapter/status filters, full-text search, review, notes export |
 | 课程练习 / Lessons | 理解概念、练习命令、判断证据 / Concepts, commands, evidence |
 | 学习集群 / Cluster | 实机资源、事件、日志，以及节点摘要 / Live resources, events, logs, node summary |
 | 故障案例 / Cases | 三阶段模拟就绪探针案例、可选真实事故列表 / Three-stage readiness case, optional live incidents |
-| 共享弹窗 / Dialogs | 可搜索术语与资料、本章实机手册、重置、手机访问 / Glossary, chapter manuals, reset, phone access |
+| 共享弹窗 / Dialogs | 可搜索术语与资料、六份实机手册、重置、手机访问 / Glossary, six manuals, reset, phone access |
 
 所有课程可进入，完成标记不承担导航锁。课程三步可来回切换，哈希路由保留课程和步骤并支持浏览器返回。主要按钮对应当前步骤的下一项动作；完成按钮仅在阅读、记录自检和小测通过后启用；深入课程还要求分析笔记和逐项自评。桌面目录按章折叠，当前章节默认展开。
 
 All lessons remain navigable regardless of completion. Three lesson steps support backtracking; hash routes preserve the selected lesson and step with browser history. Primary actions follow the current task; completion requires reading, record verification, and the quiz; extended lessons also require a reflection and acceptance checklist. The desktop directory collapses by chapter and opens the active chapter.
+
+首页的章节、学习状态和搜索组成同一个筛选区域，结果保留课程所属章节与匹配片段。待复习数量提供直接入口，课程页使用可切换按钮表达是否加入待复习；此标记不替代完成状态。笔记导出放在首页，缺少笔记时禁用，导出反馈明确为 Markdown 文件，不暗示同步或恢复进度。
+
+Chapter, status, and search controls form one filter area with contextual result excerpts. A review count opens the review list; lesson buttons expose the review toggle independently of completion. Notes export lives on the overview, is disabled without notes, and describes a Markdown download without implying synchronization or progress restore.
 
 ## 响应式与可访问性 / Responsive and Accessible Behavior
 
@@ -32,9 +36,11 @@ Controls use semantic buttons, radio groups, tabs, and explicit labels. Shared d
 
 ## 数据状态 / Data States
 
-课程与案例持续显示模拟标签，任何示例输出都不代表当前电脑状态。实机视图首次未读取时显示空状态；读取成功后显示来源和时间。资源、节点、事件、日志独立更新，失败保留原快照、原时间和错误说明，不退回模拟成功。事件为空、筛选无匹配和尚未连接分别处理。
+课程与案例持续显示模拟标签，任何示例输出都不代表当前电脑状态。手册打开时按需加载，等待状态与加载失败分别呈现，失败时提示刷新工作台重试。实机视图首次未读取时显示空状态；读取成功后显示来源和时间。资源、节点、事件、日志独立更新，失败保留原快照、原时间和错误说明，不退回模拟成功。事件为空、筛选无匹配和尚未连接分别处理。
 
-Lessons and cases retain explicit simulation labels. Live views begin empty and display provenance and timestamps after successful reads. Resources, nodes, events, and logs update independently. Failed refreshes retain the previous snapshot and time with an error, without substituting simulated success. Empty events, no filter matches, and no connection have distinct states.
+Lessons and cases retain explicit simulation labels. Manuals load on demand with distinct loading and error states; errors explain refreshing the workbench to retry. Live views begin empty and display provenance and timestamps after successful reads. Resources, nodes, events, and logs update independently. Failed refreshes retain the previous snapshot and time with an error, without substituting simulated success. Empty events, no filter matches, and no connection have distinct states.
+
+本轮界面与流程验证结果见[学习改进记录](../../docs/learning-improvements-2026-09-10.md)。
 
 产品行为、进度迁移及范围见 [PRODUCT.md](PRODUCT.md)；网络协议见 [INTEGRATION_PLAN.md](../INTEGRATION_PLAN.md)。
 
